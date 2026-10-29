@@ -177,6 +177,30 @@ def zerotts_speaker(edge: str | None) -> str:
     return name if name in ZEROTTS_IDS else ZEROTTS_DEFAULT
 
 
+def zerotts_providers() -> list:
+    """CPU is default: DirectML runs on the GPU but AR TTS is slower (~1.7×).
+
+    Set ZEROTTS_DEVICE=dml|cuda|cpu to override. CUDA needs ORT GPU + CUDA 13.
+    """
+    want = (os.environ.get("ZEROTTS_DEVICE") or "cpu").strip().lower()
+    try:
+        import onnxruntime as ort
+        avail = set(ort.get_available_providers())
+    except Exception:
+        return ["CPUExecutionProvider"]
+    if want in ("dml", "gpu") and "DmlExecutionProvider" in avail:
+        return [("DmlExecutionProvider", {"device_id": 0}), "CPUExecutionProvider"]
+    if want == "cuda" and "CUDAExecutionProvider" in avail:
+        return [
+            ("CUDAExecutionProvider", {
+                "device_id": 0,
+                "arena_extend_strategy": "kSameAsRequested",
+            }),
+            "CPUExecutionProvider",
+        ]
+    return ["CPUExecutionProvider"]
+
+
 def get_zerotts():
     """Load ONNX weights once. First call may download ~900 MB from Hugging Face."""
     global _zerotts, _zerotts_error
@@ -185,10 +209,37 @@ def get_zerotts():
             return _zerotts
         from zerotts import ZeroTTS
 
-        log.info("loading ZeroTTS (zeroweight-ai/ZeroTTS)")
-        _zerotts = ZeroTTS.from_pretrained("zeroweight-ai/ZeroTTS", warmup=True)
+        providers = zerotts_providers()
+        head = providers[0][0] if isinstance(providers[0], tuple) else providers[0]
+        log.info("loading ZeroTTS providers=%s", [p[0] if isinstance(p, tuple) else p for p in providers])
+        try:
+            _zerotts = ZeroTTS.from_pretrained(
+                "zeroweight-ai/ZeroTTS",
+                warmup=True,
+                providers=providers,
+                intra_op_num_threads=2 if head != "CPUExecutionProvider" else 4,
+            )
+        except Exception as e:
+            if head == "CPUExecutionProvider":
+                raise
+            log.warning("ZeroTTS GPU load failed (%s), retrying CPU", e)
+            _zerotts = ZeroTTS.from_pretrained(
+                "zeroweight-ai/ZeroTTS",
+                warmup=True,
+                providers=["CPUExecutionProvider"],
+                intra_op_num_threads=4,
+            )
         _zerotts_error = None
-        log.info("ZeroTTS ready voices=%s", _zerotts.list_voices())
+        used = []
+        for sess in (
+            getattr(_zerotts, "text_encoder_sess", None),
+            getattr(_zerotts, "prefix_step_sess", None),
+            getattr(_zerotts, "local_frame_decode_sess", None),
+        ):
+            if sess is not None:
+                used = sess.get_providers()
+                break
+        log.info("ZeroTTS ready voices=%s providers=%s", _zerotts.list_voices(), used)
         return _zerotts
 
 
@@ -210,10 +261,16 @@ def start_warmup() -> None:
 
 
 def zerotts_status() -> dict:
+    providers = []
+    if _zerotts is not None:
+        sess = getattr(_zerotts, "local_frame_decode_sess", None)
+        if sess is not None:
+            providers = list(sess.get_providers())
     return {
         "loaded": _zerotts is not None,
         "error": _zerotts_error,
         "speakers": [name for name, _label, _tags in ZEROTTS_SPEAKERS],
+        "providers": providers or [p[0] if isinstance(p, tuple) else p for p in zerotts_providers()],
     }
 
 

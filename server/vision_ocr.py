@@ -36,6 +36,7 @@ def get_engine():
             "Rec.model_path": str(MODELS / "PP-OCRv6_rec_small.onnx"),
             "Cls.model_path": str(MODELS / "ch_ppocr_mobile_v2.0_cls_mobile.onnx"),
             "EngineConfig.onnxruntime.enable_cpu_mem_arena": False,
+            "EngineConfig.onnxruntime.use_cuda": False,
         }
         log.info("loading RapidOCR from %s", MODELS)
         _engine = RapidOCR(params=params)
