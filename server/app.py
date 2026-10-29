@@ -624,6 +624,34 @@ AGENT_ACTION_ALIAS = {
     "execute_javascript": "execute_javascript",
 }
 
+def _agent_scroll_hits(body: dict) -> int:
+    n = 0
+    for m in body.get("messages") or []:
+        if not isinstance(m, dict) or m.get("role") not in ("assistant", "tool"):
+            continue
+        blob = str(m.get("content") or "")
+        if re.search(r"Scrolled|Sent wheel|scroll_down|Scrolldown", blob, re.I):
+            n += 1
+    return n
+
+
+def maybe_stop_swipe(body: dict, args: dict, content: str = "") -> dict:
+    last_user = last_user_text(body)
+    empty = not (content or "").strip() or (content or "").strip() in ("Mình đây.",)
+    scrolls = _agent_scroll_hits(body)
+    want_stop = (empty and (jev_brain.swipe_only(last_user) or scrolls >= 1)) or (
+        jev_brain.swipe_only(last_user) and scrolls >= 2 and "scroll" in (args.get("action") or {})
+    )
+    if not want_stop:
+        return args
+    return {
+        "evaluation_previous_goal": "scrolled",
+        "memory": "swipe",
+        "next_goal": "stop",
+        "action": {"done": {"text": "Đã lướt.", "success": True}},
+    }
+
+
 AGENT_OUTPUT_NUDGE = (
     "Return ONE JSON object only, no markdown, no prose. Shape:\n"
     '{"evaluation_previous_goal":"short","memory":"short","next_goal":"short",'
@@ -632,7 +660,10 @@ AGENT_OUTPUT_NUDGE = (
     "input_text {index,text}, press_key {key}, scroll {down:true}, "
     "go_to_url {url}, open_new_tab {url}, switch_to_tab {tab_id}, close_tab {tab_id}, "
     "wait {seconds}, done {text,success}, act {goal,values}. "
-    "Use a numeric [index] from Interactive Elements."
+    "Use a numeric [index] from Interactive Elements. "
+    "If the user only asked to swipe/scroll/lướt a video feed, do at most TWO "
+    "scroll {down:true} then immediately done {success:true,text:'Đã lướt.'}. "
+    "Never keep scrolling until max steps."
 )
 
 
@@ -875,7 +906,12 @@ def fake_tool_call(body: dict, content: str, parsed: dict | None = None) -> dict
         if args["mode"] not in ("chat", "task"):
             args["mode"] = "chat"
     elif name == "AgentOutput":
-        args = coerce_agent_output(content, parsed, last_user=last_user_text(body))
+        last_user = last_user_text(body)
+        args = maybe_stop_swipe(
+            body,
+            coerce_agent_output(content, parsed, last_user=last_user),
+            content,
+        )
     else:
         args = parsed or extract_json_obj(content) or {"text": content}
     return {
@@ -918,10 +954,14 @@ def coerce_existing_tool_calls(body: dict, data: dict) -> dict:
         fn["name"] = "reply"
         fn["arguments"] = json.dumps(args, ensure_ascii=False)
     elif name == "AgentOutput":
-        args = coerce_agent_output(
+        args = maybe_stop_swipe(
+            body,
+            coerce_agent_output(
+                str(raw_args),
+                parsed if isinstance(parsed, dict) else None,
+                last_user=last_user_text(body),
+            ),
             str(raw_args),
-            parsed if isinstance(parsed, dict) else None,
-            last_user=last_user_text(body),
         )
         fn["name"] = "AgentOutput"
         fn["arguments"] = json.dumps(args, ensure_ascii=False)

@@ -7,6 +7,12 @@ import re
 
 log = logging.getLogger("jev_brain")
 
+SWIPE_RE = re.compile(
+    r"lướt|luot|swipe|cuộn|cuon|\bscroll\b|kéo xuống|keo xuong|video tiếp|next video|feed",
+    re.I,
+)
+TASK_RE = re.compile(r"tìm|search|click|mở http|goto|go to|mua|điền|type |nhập|bấm", re.I)
+
 LOCAL_PREFER = (
     "qwen2.5:14b",
     "qwen2.5:7b",
@@ -75,6 +81,21 @@ def _jev_pick_target(criteria: list[str], elements: list, action: str) -> str:
     return criteria[0]
 
 
+def swipe_only(text: str) -> bool:
+    t = text or ""
+    return bool(SWIPE_RE.search(t)) and not TASK_RE.search(t)
+
+
+def _history_scrolls(task: dict) -> int:
+    hist = task.get("history") if isinstance(task.get("history"), list) else []
+    n = 0
+    for h in hist:
+        act = str((h or {}).get("action") or "").lower()
+        if "scroll" in act:
+            n += 1
+    return n
+
+
 def heuristic_jev(body: dict) -> dict:
     questions = body.get("questions") or {}
     state = body.get("state") or {}
@@ -84,6 +105,8 @@ def heuristic_jev(body: dict) -> dict:
     page = state.get("page") if isinstance(state.get("page"), dict) else {}
     goal = str(task.get("goal") or "")
     elements = page.get("elements") if isinstance(page.get("elements"), list) else []
+    scrolls = _history_scrolls(task)
+    swipe_done = swipe_only(goal) and scrolls >= 1
     taskish = bool(re.search(
         r"\b(search|click|open|go to|browse|find|google|mở|tìm|bấm|vào trang|navigate|fill|type|submit)\b",
         blob,
@@ -95,7 +118,10 @@ def heuristic_jev(body: dict) -> dict:
     preferred_action = None
     action_q = questions.get("action") or {}
     if (action_q or {}).get("type") == "choice":
-        preferred_action = _jev_pick_action(_criteria_keys(action_q), goal, taskish)
+        if swipe_done and "none" in _criteria_keys(action_q):
+            preferred_action = "none"
+        else:
+            preferred_action = _jev_pick_action(_criteria_keys(action_q), goal, taskish)
     for name, q in questions.items():
         qtype = (q or {}).get("type")
         if qtype == "noul":
@@ -107,7 +133,7 @@ def heuristic_jev(body: dict) -> dict:
             elif name in ("about_page",):
                 p = 0.7 if pagish else 0.15
             elif name in ("done",):
-                p = 0.2
+                p = 0.88 if swipe_done else 0.2
             elif name in ("blocked", "irreversible"):
                 p = 0.05
             elif name == "ok":
@@ -178,6 +204,8 @@ def build_jev_prompt(body: dict) -> str:
         "- For action: pick the next single UI verb toward task.goal.\n"
         "- For target: pick the element index whose HTML fits that action "
         "(input/textarea for type, select for select).\n"
+        "- If task.goal is only swipe/scroll/lướt a feed and history already has "
+        "scroll_down once, set action to none and done noul high. Do not loop.\n"
         f"QUESTIONS:\n{json.dumps(spec, ensure_ascii=False)}\n"
         f"STATE:\n{json.dumps(trim_state(body.get('state') or {}), ensure_ascii=False)}\n"
     )
