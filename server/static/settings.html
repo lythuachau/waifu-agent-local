@@ -81,8 +81,13 @@
         <label for="codex_model">Model Codex</label>
         <select id="codex_model"></select>
       </div>
+      <div>
+        <label for="vision_model">Vision (xem ảnh trên trang)</label>
+        <select id="vision_model"></select>
+      </div>
     </div>
-    <p class="hint">Mặc định: Jev + agent đi Codex, lỗi thì Ollama, Jev lỗi tiếp thì regex. Verify <code>confirm</code> không gọi Codex. Não local thông minh hơn: <code>ollama pull qwen2.5:7b</code> rồi chọn model đó (máy đang có llama3.2 3.2B). Ảnh trên trang: <code>ollama pull llava</code>.</p>
+    <p class="hint" id="vision-hint"></p>
+    <p class="hint">Mặc định: Jev + agent đi Codex, lỗi thì Ollama, Jev lỗi tiếp thì regex. Ảnh trên trang đi Ollama vision (llava), không đi Codex.</p>
   </section>
 
   <section class="card" id="voice">
@@ -187,6 +192,13 @@ async function load() {
   $("llm_backend").value = s.llm_backend || "ollama";
   fillSelect($("ollama_model"), catalog.ollama_models || [], s.ollama_model || "llama3.2");
   fillSelect($("codex_model"), (catalog.codex_models || []).map((id) => ({id, label: id})), s.codex_model);
+  const vis = [{id: "auto", label: "Tự chọn model vision"}].concat(
+    (catalog.vision_models || []).map((m) => ({id: m.id, label: m.id}))
+  );
+  fillSelect($("vision_model"), vis, s.vision_model || "auto");
+  $("vision-hint").innerHTML = catalog.vision_resolved
+    ? `<span class="ok">Vision: ${catalog.vision_resolved}. Avatar mô tả screenshot khi trang có ảnh hoặc ít chữ.</span>`
+    : '<span class="bad">Chưa có model vision. Chạy <code>ollama pull llava</code> (~4.5 GB). llama3.2 không nhìn được ảnh.</span>';
   fillSelect($("default_edge"), catalog.edge_voices || [], s.default_edge);
   $("default_engine").value = s.default_engine || "auto";
   $("tts_gateway").value = s.tts_gateway || "local";
@@ -222,6 +234,7 @@ function payload() {
     llm_backend: $("llm_backend").value,
     ollama_model: $("ollama_model").value,
     codex_model: $("codex_model").value,
+    vision_model: $("vision_model").value,
     default_engine: $("default_engine").value,
     default_edge: $("default_edge").value,
     tts_gateway: $("tts_gateway").value,

@@ -39,10 +39,23 @@ LLM_MODEL = os.environ.get("LLM_MODEL", "llama3.2")
 VISION_MODEL = os.environ.get("VISION_MODEL", LLM_MODEL)
 TTS_VOICE = os.environ.get("TTS_VOICE", "ja-JP-NanamiNeural")
 SETTINGS_PATH = DATA / "settings.json"
+VISION_HINTS = (
+    "llava",
+    "moondream",
+    "minicpm",
+    "bakllava",
+    "llama3.2-vision",
+    "qwen2.5-vl",
+    "qwen2.5vl",
+    "qwen2-vl",
+    "pixtral",
+    "gemma3",
+)
 DEFAULT_SETTINGS = {
     "llm_backend": "codex",
     "ollama_model": "llama3.2",
     "codex_model": "gpt-6-luna",
+    "vision_model": "auto",
     "default_engine": "auto",
     "default_edge": "ja-JP-NanamiNeural",
     "voice_map": {},
@@ -200,6 +213,7 @@ def load_settings() -> dict:
         rec["llm_backend"] = "codex" if codex_llm.logged_in() else "ollama"
     rec["codex_model"] = rec.get("codex_model") or "gpt-6-luna"
     rec["ollama_model"] = rec.get("ollama_model") or LLM_MODEL
+    rec["vision_model"] = rec.get("vision_model") or "auto"
     rec["default_engine"] = rec.get("default_engine") or "auto"
     rec["default_edge"] = rec.get("default_edge") or "ja-JP-NanamiNeural"
     rec["voice_map"] = rec.get("voice_map") if isinstance(rec.get("voice_map"), dict) else {}
@@ -215,6 +229,8 @@ def save_settings(rec: dict) -> dict:
         current["codex_model"] = str(rec["codex_model"])
     if rec.get("ollama_model"):
         current["ollama_model"] = str(rec["ollama_model"])
+    if rec.get("vision_model"):
+        current["vision_model"] = str(rec["vision_model"])
     if rec.get("default_engine") in ("auto", "gtts", "edge", "zerotts"):
         current["default_engine"] = rec["default_engine"]
     if rec.get("default_edge"):
@@ -1023,12 +1039,7 @@ async def companion_chat(body: dict):
     return JSONResponse(fake_tool_call({**body, "tool_choice": {"function": {"name": "reply"}}}, content or "Mình đây."))
 
 
-@app.post("/api/v1/vision/chat/completions")
-async def vision_chat(body: dict):
-    messages = body.get("messages") or []
-    result = await proxy_chat(body, vision=True)
-    if result.status_code < 400:
-        return result
+def _vision_fallback_text(messages: list) -> str:
     tab = ""
     for m in messages:
         c = m.get("content")
@@ -1039,17 +1050,116 @@ async def vision_chat(body: dict):
         elif isinstance(c, str) and not tab:
             tab = c
     text = (
-        "Local vision model cannot read screenshots (llama3.2 is text-only). "
-        "Use the numeric [index] list from browser_state instead."
+        "No local vision model is installed. Run `ollama pull llava` then pick it at /settings. "
+        "Until then use the numeric [index] list from the page."
     )
     if tab:
-        text = f"{text} Page text: {tab[:800]}"
-    log.warning("vision fallback after %s", result.status_code)
+        text = f"{text} Tab: {tab[:800]}"
+    return text
+
+
+def ollama_native_messages(messages: list) -> list[dict]:
+    out = []
+    for m in messages or []:
+        rec = {"role": m.get("role") or "user", "content": ""}
+        images: list[str] = []
+        c = m.get("content")
+        if isinstance(c, str):
+            rec["content"] = c
+        elif isinstance(c, list):
+            texts = []
+            for p in c:
+                if not isinstance(p, dict):
+                    continue
+                if p.get("type") == "text":
+                    texts.append(str(p.get("text") or ""))
+                elif p.get("type") == "image_url":
+                    url = ""
+                    raw = p.get("image_url")
+                    if isinstance(raw, dict):
+                        url = str(raw.get("url") or "")
+                    elif isinstance(raw, str):
+                        url = raw
+                    if url.startswith("data:") and "," in url:
+                        url = url.split(",", 1)[1]
+                    if url:
+                        images.append(url)
+            rec["content"] = "\n".join(t for t in texts if t)
+        if images:
+            rec["images"] = images
+        out.append(rec)
+    return out
+
+
+async def resolve_vision_model() -> str | None:
+    rec = load_settings()
+    chosen = (rec.get("vision_model") or "auto").strip()
+    rows = await list_ollama_models()
+    vis = [r["id"] for r in rows if r.get("vision")]
+    if chosen and chosen not in ("auto",):
+        for r in rows:
+            if r["id"] == chosen or r["id"].startswith(chosen + ":"):
+                return r["id"]
+        return chosen
+    prefer = ("llava", "qwen2.5-vl", "qwen2.5vl", "llama3.2-vision", "moondream", "minicpm")
+    for hint in prefer:
+        for vid in vis:
+            if hint in vid.lower():
+                return vid
+    return vis[0] if vis else None
+
+
+@app.post("/api/v1/vision/chat/completions")
+async def vision_chat(body: dict):
+    """Screenshot describe. Always Ollama vision — Codex/llama3.2 cannot see images."""
+    messages = body.get("messages") or []
+    model = await resolve_vision_model()
+    if not model:
+        log.warning("vision: no Ollama vision model")
+        return JSONResponse({
+            "id": "chatcmpl-local-vision",
+            "object": "chat.completion",
+            "choices": [{
+                "index": 0,
+                "finish_reason": "stop",
+                "message": {"role": "assistant", "content": _vision_fallback_text(messages)},
+            }],
+            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        })
+    native = {
+        "model": model,
+        "messages": ollama_native_messages(messages),
+        "stream": False,
+        "options": {"temperature": 0.1},
+    }
+    base = LLM_BASE[:-3] if LLM_BASE.endswith("/v1") else LLM_BASE
+    try:
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            r = await client.post(f"{base}/api/chat", json=native)
+    except httpx.RequestError as e:
+        log.warning("vision ollama unreachable: %s", e)
+        return JSONResponse({"error": {"message": f"Ollama vision unreachable: {e}"}}, status_code=502)
+    try:
+        data = r.json()
+    except Exception:
+        return JSONResponse({"error": {"message": r.text[:400]}}, status_code=r.status_code or 502)
+    if r.status_code >= 400:
+        log.warning("vision %s %s", r.status_code, str(data)[:200])
+        return JSONResponse(data, status_code=r.status_code)
+    content = ((data.get("message") or {}).get("content") or "").strip()
+    if not content:
+        return JSONResponse({"error": {"message": "the vision model returned nothing"}}, status_code=502)
+    log.info("vision via %s chars=%s", model, len(content))
     return JSONResponse({
         "id": "chatcmpl-local-vision",
         "object": "chat.completion",
-        "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": text}}],
-        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        "choices": [{
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {"role": "assistant", "content": content},
+        }],
+        "usage": data.get("usage") or {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        "model": model,
     })
 
 
@@ -1309,10 +1419,14 @@ async def list_ollama_models() -> list[dict]:
         for m in (r.json().get("models") or []):
             name = m.get("name") or m.get("model")
             if name:
+                caps = m.get("capabilities") or []
+                n = name.lower()
+                vision = "vision" in caps or any(h in n for h in VISION_HINTS)
                 rows.append({
                     "id": name,
                     "size": m.get("size"),
                     "details": (m.get("details") or {}).get("parameter_size"),
+                    "vision": vision,
                 })
         return rows
     except Exception:
@@ -1346,6 +1460,8 @@ async def local_catalog():
     return {
         "settings": rec,
         "ollama_models": ollama,
+        "vision_models": [m for m in ollama if m.get("vision")],
+        "vision_resolved": await resolve_vision_model(),
         "codex_models": codex_llm.list_model_ids(),
         "codex": codex_llm.status(),
         "edge_voices": local_speech.EDGE_CATALOG,
@@ -1416,6 +1532,7 @@ def healthz():
         "codex": rec.get("codex_model") if rec.get("llm_backend") == "codex" else None,
         "codex_logged_in": codex_llm.logged_in(),
         "jev": "codex>ollama>regex" if rec.get("llm_backend") != "ollama" else "ollama>regex",
+        "vision_model": rec.get("vision_model") or "auto",
         "tts_gateway": rec.get("tts_gateway") or "local",
         "original_voices": bool(zw_developer_key()),
         "zerotts": local_speech.zerotts_status(),
