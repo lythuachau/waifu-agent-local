@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Cài đặt — Waifu Agent local</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #161014;
+    --card: #23181e;
+    --line: #3a2a32;
+    --ink: #f4e9e1;
+    --muted: #b9a49a;
+    --accent: #e8b4a2;
+    --ok: #9ee6b2;
+    --bad: #ffb4b4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 15px/1.45 system-ui, sans-serif;
+    background: radial-gradient(1200px 600px at 80% -10%, #3a2430 0%, var(--bg) 50%);
+    color: var(--ink);
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 36px 20px 80px; }
+  h1 { font-size: 26px; font-weight: 650; margin: 0 0 8px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; padding: 20px 22px; margin-bottom: 18px;
+  }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+  select, input, textarea, button {
+    font: inherit; color: var(--ink);
+    background: #1a1218; border: 1px solid var(--line); border-radius: 10px;
+  }
+  select, input, textarea { width: 100%; padding: 9px 12px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+  .status { font-size: 13px; margin: 0 0 14px; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 550; }
+  td select { min-width: 220px; }
+  .actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+  button {
+    padding: 9px 16px; cursor: pointer; background: var(--accent); color: #2a1618;
+    border: 0; font-weight: 650;
+  }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: wait; }
+  #msg { color: var(--ok); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  audio { width: 100%; margin-top: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cài đặt local</h1>
+  <p class="sub">Chọn model AI và giọng nói. Side panel chạy local, không nhập API key.</p>
+
+  <section class="card" id="ai">
+    <h2>Model AI</h2>
+    <p class="status" id="ai-status">Đang tải…</p>
+    <div class="row">
+      <div>
+        <label for="llm_backend">Backend</label>
+        <select id="llm_backend">
+          <option value="ollama">Ollama (máy local)</option>
+          <option value="codex">Codex / ChatGPT trên máy này</option>
+        </select>
+      </div>
+      <div>
+        <label for="ollama_model">Model Ollama</label>
+        <select id="ollama_model"></select>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <div>
+        <label for="codex_model">Model Codex</label>
+        <select id="codex_model"></select>
+      </div>
+    </div>
+    <p class="hint">Ollama: <code>ollama pull llama3.2</code>. Codex: chạy <code>codex login</code> nếu chưa đăng nhập ChatGPT.</p>
+  </section>
+
+  <section class="card" id="voice">
+    <h2>Giọng nói</h2>
+    <div class="row">
+      <div>
+        <label for="tts_gateway">Nguồn giọng khi chat</label>
+        <select id="tts_gateway">
+          <option value="local">Local (ZeroTTS / Edge / Google TTS)</option>
+          <option value="zeroweight">Gốc ZeroWeight (Cartesia / Minimax clone)</option>
+        </select>
+        <p class="hint" id="zw-voice-hint"></p>
+        <p class="hint" id="zerotts-hint"></p>
+      </div>
+      <div>
+        <label for="default_engine">Engine local</label>
+        <select id="default_engine">
+          <option value="auto">Tự động (câu tiếng Việt → ZeroTTS)</option>
+          <option value="zerotts">Luôn ZeroTTS tiếng Việt</option>
+          <option value="gtts">Luôn Google TTS tiếng Việt</option>
+          <option value="edge">Luôn Edge Neural</option>
+        </select>
+      </div>
+      <div>
+        <label for="default_edge">Giọng Edge mặc định</label>
+        <select id="default_edge"></select>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <label for="preview_text">Nghe thử</label>
+      <input id="preview_text" value="Xin chào, đây là giọng thử của mình.">
+      <div class="actions">
+        <button type="button" class="ghost" id="btn-preview">Phát giọng mặc định</button>
+      </div>
+      <audio id="player" controls></audio>
+    </div>
+    <div style="margin-top:18px; overflow:auto">
+      <table>
+        <thead>
+          <tr><th>Avatar</th><th>Giọng</th><th></th></tr>
+        </thead>
+        <tbody id="voice-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button type="button" id="btn-save">Lưu cài đặt</button>
+    <span id="msg"></span>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let catalog = null;
+
+function fillSelect(sel, items, current, valueKey = "id", labelKey = "label") {
+  sel.innerHTML = "";
+  const seen = new Set();
+  for (const item of items) {
+    const id = typeof item === "string" ? item : item[valueKey];
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = typeof item === "string" ? item : (item[labelKey] || id);
+    sel.appendChild(opt);
+  }
+  if (current && !seen.has(current)) {
+    const opt = document.createElement("option");
+    opt.value = current;
+    opt.textContent = current;
+    sel.appendChild(opt);
+  }
+  if (current) sel.value = current;
+}
+
+function voiceOptionsHtml(selected) {
+  const voices = catalog.edge_voices || [];
+  return voices.map((v) =>
+    `<option value="${v.id}" ${v.id === selected ? "selected" : ""}>${v.label}</option>`
+  ).join("");
+}
+
+function renderPersonas() {
+  const body = $("voice-rows");
+  body.innerHTML = "";
+  for (const p of catalog.personas || []) {
+    const tr = document.createElement("tr");
+    tr.dataset.voiceId = p.voice_id;
+    tr.innerHTML = `
+      <td>${p.name}<div class="hint">${p.provider || ""}</div></td>
+      <td><select data-voice>${voiceOptionsHtml(p.edge)}</select></td>
+      <td><button type="button" class="ghost" data-play>Nghe</button></td>`;
+    body.appendChild(tr);
+  }
+}
+
+async function load() {
+  const r = await fetch("/api/v1/local/catalog");
+  catalog = await r.json();
+  const s = catalog.settings || {};
+  $("llm_backend").value = s.llm_backend || "ollama";
+  fillSelect($("ollama_model"), catalog.ollama_models || [], s.ollama_model || "llama3.2");
+  fillSelect($("codex_model"), (catalog.codex_models || []).map((id) => ({id, label: id})), s.codex_model);
+  fillSelect($("default_edge"), catalog.edge_voices || [], s.default_edge);
+  $("default_engine").value = s.default_engine || "auto";
+  $("tts_gateway").value = s.tts_gateway || "local";
+  const speech = catalog.speech || {};
+  $("zw-voice-hint").innerHTML = speech.original_available
+    ? '<span class="ok">Key ZeroWeight có trên máy. Plan free: 1 credit/giây socket, 1 session TTS. STT vẫn local.</span>'
+    : '<span class="bad">Chưa có ZW_KEY / server/data/zw_key.txt — giọng gốc không mint được.</span>';
+  const zt = speech.zerotts || {};
+  $("zerotts-hint").innerHTML = zt.loaded
+    ? '<span class="ok">ZeroTTS đã nạp. Câu tiếng Việt dùng giọng local ONNX.</span>'
+    : (zt.error
+      ? `<span class="bad">ZeroTTS lỗi: ${zt.error}</span>`
+      : '<span>ZeroTTS đang nạp model (~900 MB lần đầu). Nghe thử tiếng Việt đợi xong.</span>');
+  const c = catalog.codex || {};
+  const ollamaN = (catalog.ollama_models || []).length;
+  $("ai-status").innerHTML = [
+    ollamaN ? `<span class="ok">Ollama ${ollamaN} model</span>` : `<span class="bad">Ollama không thấy model</span>`,
+    c.logged_in ? `<span class="ok"> · Codex đã login</span>` : `<span class="bad"> · Codex chưa login</span>`,
+  ].join("");
+  renderPersonas();
+}
+
+function payload() {
+  const voice_map = {};
+  for (const tr of document.querySelectorAll("#voice-rows tr")) {
+    const vid = tr.dataset.voiceId;
+    const edge = tr.querySelector("select[data-voice]").value;
+    const rec = (catalog.edge_voices || []).find((v) => v.id === edge);
+    const mapped = rec && (rec.engine === "gtts" || rec.engine === "zerotts") ? rec.engine : "auto";
+    voice_map[vid] = { edge, engine: mapped };
+  }
+  return {
+    llm_backend: $("llm_backend").value,
+    ollama_model: $("ollama_model").value,
+    codex_model: $("codex_model").value,
+    default_engine: $("default_engine").value,
+    default_edge: $("default_edge").value,
+    tts_gateway: $("tts_gateway").value,
+    voice_map,
+  };
+}
+
+async function save() {
+  $("msg").textContent = "đang lưu…";
+  const r = await fetch("/api/v1/local/settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload()),
+  });
+  $("msg").textContent = r.ok ? "đã lưu" : "lỗi lưu";
+}
+
+function engineFor(edgeId, fallback) {
+  const rec = (catalog.edge_voices || []).find((v) => v.id === edgeId);
+  if (rec && rec.engine === "zerotts") return "zerotts";
+  if (rec && rec.engine === "gtts") return "gtts";
+  if (fallback === "zerotts" || fallback === "gtts" || fallback === "auto") return fallback;
+  return "edge";
+}
+
+let audioCtx = null;
+function unlockAudio() {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  if (!audioCtx) audioCtx = new Ctx();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+async function playBytes(buf, mime) {
+  const ctx = audioCtx;
+  if (ctx) {
+    try {
+      const decoded = await ctx.decodeAudioData(buf.slice(0));
+      const src = ctx.createBufferSource();
+      src.buffer = decoded;
+      src.connect(ctx.destination);
+      src.start();
+    } catch (e) {
+      console.warn("decodeAudioData", e);
+    }
+  }
+  const blob = new Blob([buf], { type: mime || "audio/mpeg" });
+  const url = URL.createObjectURL(blob);
+  const player = $("player");
+  if (player.dataset.url) URL.revokeObjectURL(player.dataset.url);
+  player.dataset.url = url;
+  player.src = url;
+  player.load();
+  try { await player.play(); } catch (e) { /* native controls still work */ }
+}
+
+async function preview(extra = {}) {
+  const btn = extra.btn;
+  if (btn) btn.disabled = true;
+  unlockAudio();
+  $("msg").textContent = "đang tạo giọng…";
+  try {
+    const edge = extra.edge || $("default_edge").value;
+    const engine = extra.engine || engineFor(edge, $("default_engine").value);
+    const r = await fetch("/api/v1/local/tts-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: $("preview_text").value,
+        edge,
+        engine,
+        voice_id: extra.voice_id,
+      }),
+    });
+    const mime = r.headers.get("content-type") || "audio/mpeg";
+    if (!r.ok) {
+      let detail = "preview " + r.status;
+      try { detail = (await r.json()).error?.message || detail; } catch {}
+      throw new Error(detail);
+    }
+    const buf = await r.arrayBuffer();
+    if (buf.byteLength < 200) throw new Error("audio rỗng");
+    await playBytes(buf, mime);
+    $("msg").textContent = "đã phát — nếu im, bấm ▶ trên thanh audio";
+  } catch (e) {
+    $("msg").textContent = "không phát được: " + e.message;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+$("btn-save").onclick = save;
+$("btn-preview").onclick = () => preview({});
+$("voice-rows").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-play]");
+  if (!btn) return;
+  const tr = btn.closest("tr");
+  const edge = tr.querySelector("select[data-voice]").value;
+  preview({
+    btn,
+    voice_id: tr.dataset.voiceId,
+    edge,
+    engine: engineFor(edge),
+  });
+});
+
+load().catch((e) => { $("ai-status").innerHTML = `<span class="bad">${e}</span>`; });
+</script>
+</body>
+</html>

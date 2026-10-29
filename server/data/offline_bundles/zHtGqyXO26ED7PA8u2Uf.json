@@ -1,0 +1,46 @@
+{
+  "actions": {
+    "listening": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/zHtGqyXO26ED7PA8u2Uf/vid_listening_43d1234e-169e-4754-8a65-f66549328897_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/zHtGqyXO26ED7PA8u2Uf/vid_listening_43d1234e-169e-4754-8a65-f66549328897_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Listening",
+      "step_size": 5
+    },
+    "zafkiel_shooting": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/zHtGqyXO26ED7PA8u2Uf/vid_zafkiel_shooting_b9c3dd20-7e8f-422b-a0e0-fdab5f8a3066.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Zafkiel shooting",
+      "step_size": 5
+    },
+    "speaking": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/zHtGqyXO26ED7PA8u2Uf/vid_speaking_4c4b5fd4-502c-4d61-a7dc-ccd35be4b437_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/zHtGqyXO26ED7PA8u2Uf/vid_speaking_4c4b5fd4-502c-4d61-a7dc-ccd35be4b437_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking",
+      "step_size": 5
+    }
+  },
+  "transparent_background": false
+}

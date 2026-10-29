@@ -1,0 +1,9 @@
+{
+  "llm_backend": "ollama",
+  "ollama_model": "llama3.2",
+  "codex_model": "gpt-6-luna",
+  "default_engine": "auto",
+  "default_edge": "ja-JP-NanamiNeural",
+  "voice_map": {},
+  "tts_gateway": "local"
+}

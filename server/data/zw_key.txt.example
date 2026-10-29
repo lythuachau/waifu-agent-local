@@ -1,0 +1,3 @@
+# Optional. Only needed if tts_gateway=zeroweight (original Cartesia/Minimax mint).
+# Copy to zw_key.txt (gitignored) or set env ZW_KEY.
+# Zw_...

@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>offline renderer</title></head>
+<body style="margin:0;background:#1a1218;color:#f4e9e1;font:14px system-ui">
+<canvas id="c" width="360" height="640" style="background:transparent"></canvas>
+<pre id="out"></pre>
+<script type="module">
+const log = (m) => { document.getElementById("out").textContent += m + "\n"; console.log(m); };
+const canvas = document.getElementById("c");
+const origFetch = window.fetch.bind(window);
+window.fetch = async (input, init) => {
+  let url = "";
+  if (typeof input === "string") url = input;
+  else if (input && typeof input.url === "string") url = input.url;
+  else if (input && typeof input.href === "string") url = input.href;
+  else url = String(input);
+  const t0 = performance.now();
+  const shown = url.startsWith("data:") ? url.slice(0, 48) + "…" : url;
+  log("fetch " + shown);
+  try {
+    const res = await origFetch(input, init);
+    const tail = shown.startsWith("data:") ? "wasm-data-url" : (url.includes("/") ? url.split("/").pop() : shown);
+    log("fetch " + res.status + " " + Math.round(performance.now() - t0) + "ms " + tail + " len=" + (res.headers.get("content-length") || "?"));
+    return res;
+  } catch (e) {
+    log("fetch FAIL " + url + " " + (e.message || e));
+    throw e;
+  }
+};
+const mod = await import("./renderer.js");
+log("renderer imported");
+const env = await (await origFetch("/api/v1/avatars/bundle/YMwiCnO91hgpyi1mMMHv", { headers: { "X-ZW-Api-Key": "local" } })).json();
+const token = env.payload;
+log("token keys " + Object.keys(token || {}));
+const r = new mod.ZeroWeightRenderer();
+r.on("error", (e) => log("error " + (e?.message || e)));
+r.on("ready", () => log("ready state=" + r.state));
+r.on("dimensions", (w, h) => log("dimensions " + w + "x" + h));
+r.on("actionLoaded", (id) => log("actionLoaded " + id));
+try {
+  const gl = canvas.getContext("webgl") || canvas.getContext("webgl2");
+  log("webgl " + !!(gl));
+  const t0 = performance.now();
+  const timed = Promise.race([
+    r.init(canvas, { payload: token, lazyActions: true, preloadActions: ["wave_hand"] }),
+    new Promise((_, rej) => setTimeout(() => rej(new Error("init timeout 180s")), 180000)),
+  ]);
+  await timed;
+  log("init done " + Math.round(performance.now()-t0) + "ms state=" + r.state + " dims=" + JSON.stringify(r.dimensions));
+} catch (e) {
+  log("throw " + (e instanceof Error ? e.message : e) + " state=" + r.state);
+}
+log("DONE");
+</script>
+</body>
+</html>

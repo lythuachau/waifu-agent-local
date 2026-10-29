@@ -1,0 +1,105 @@
+{
+  "actions": {
+    "thumbs_up": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_thumbs_up_b57376f9-55fe-47aa-95a4-20bdc7c75423.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Thumbs Up",
+      "step_size": 5
+    },
+    "speaking_excited": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_speaking_excited_51ac897b-f031-41a9-884f-a124a916509f_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_speaking_excited_51ac897b-f031-41a9-884f-a124a916509f_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking Excited",
+      "step_size": 5
+    },
+    "think": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_think_41e89296-003d-4706-af3f-f98553faa4f9.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Think",
+      "step_size": 5
+    },
+    "embarrassed": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_embarrassed_c9597d09-4c14-4c12-b253-c8b4430caa84.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Embarrassed",
+      "step_size": 5
+    },
+    "clap": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_clap_1fae6df8-fbfb-4ad9-a5cf-a1161d10e035.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Clap",
+      "step_size": 5
+    },
+    "wave_hand": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_wave_hand_63d1a67e-9f98-4b57-9064-9410df4c8bc7.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Wave Hand",
+      "step_size": 5
+    },
+    "listening": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_listening_0d543c05-3d29-4c90-92a2-a2cbeba0d6eb_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_listening_0d543c05-3d29-4c90-92a2-a2cbeba0d6eb_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Listening",
+      "step_size": 5
+    },
+    "speaking": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_speaking_a1250b41-6bb0-4e57-b843-d25d666ed067_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/DjAMYqYUnSf9p8kgJlTY/vid_speaking_a1250b41-6bb0-4e57-b843-d25d666ed067_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking",
+      "step_size": 5
+    }
+  },
+  "transparent_background": false
+}

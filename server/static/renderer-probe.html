@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>renderer probe</title></head>
+<body>
+<canvas id="c" width="320" height="480"></canvas>
+<pre id="out"></pre>
+<script type="module">
+const out = document.getElementById("out");
+const log = (m) => { out.textContent += m + "\n"; console.log(m); };
+const canvas = document.getElementById("c");
+const url = "http://127.0.0.1:8787/static/renderer.js";
+try {
+  const mod = await import(url);
+  const Ctor = mod.ZeroWeightRenderer || mod.default;
+  log("exports " + Object.keys(mod).join(","));
+  log("ctor " + typeof Ctor);
+  const cases = [
+    ["zw_local", { zw_local: true, id: "YMwiCnO91hgpyi1mMMHv", image: "http://127.0.0.1:8787/static/avatars/YMwiCnO91hgpyi1mMMHv.png", videos: {} }],
+    ["plain_bundle", { actions: { listening: { action_id: "listening", kind: "looped", display_name: "Listening", bundle: { main: { rgb: "x", alpha: "y" }, intro: { rgb: "x", alpha: "y" } } } }, transparent_background: true }],
+    ["signed_token_empty", { sig: "AAAA", payload: "AAAA" }],
+    ["string_payload", "not-a-token"],
+  ];
+  for (const [name, payload] of cases) {
+    const r = new Ctor();
+    const err = await new Promise(async (resolve) => {
+      r.on("error", (e) => resolve("event:" + (e?.message || String(e))));
+      try {
+        await r.init(canvas, { payload, lazyActions: true, preloadActions: ["speaking"] });
+        resolve("state:" + r.state);
+      } catch (e) {
+        resolve("throw:" + (e instanceof Error ? e.message : String(e)));
+      }
+    });
+    log(name + " => " + err);
+    try { r.destroy(); } catch {}
+  }
+} catch (e) {
+  log("import fail " + (e instanceof Error ? e.stack : String(e)));
+}
+log("DONE");
+</script>
+</body>
+</html>

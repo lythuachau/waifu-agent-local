@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="manifest.include" content="[]">
+		<title>Allow microphone · Waifu Agent</title>
+		<link rel="icon" type="image/png" href="/assets/waifu-agent-32.png">
+		<style>
+			body {
+				margin: 0;
+				min-height: 100vh;
+				display: grid;
+				place-items: center;
+				background: #0b0b0f;
+				color: #fff;
+				font:
+					15px/1.6 ui-sans-serif,
+					-apple-system,
+					'Segoe UI',
+					system-ui,
+					sans-serif;
+			}
+			main {
+				max-width: 420px;
+				text-align: center;
+				padding: 24px;
+			}
+			img {
+				width: 72px;
+				height: 72px;
+			}
+			h1 {
+				font-size: 20px;
+				margin: 16px 0 8px;
+			}
+			p {
+				color: #9ca3af;
+				margin: 0 0 20px;
+			}
+			button {
+				border: 0;
+				border-radius: 12px;
+				padding: 10px 22px;
+				font: inherit;
+				font-weight: 600;
+				color: #fff;
+				cursor: pointer;
+				background: linear-gradient(90deg, #e8a873, #da9253);
+			}
+			#status.ok {
+				color: #10b981;
+			}
+			#status.error {
+				color: #ef4444;
+			}
+		</style>
+		<script type="module" crossorigin src="/chunks/mic-permission-BbqT5Ghl.js"></script>
+		<link rel="modulepreload" crossorigin href="/chunks/_virtual_wxt-html-plugins-BsPm7yBB.js">
+	</head>
+	<body>
+		<main>
+			<img src="/assets/waifu-agent-256.webp" alt="">
+			<h1>Allow the microphone</h1>
+			<p id="status">
+				Chrome can't ask for microphone access inside the side panel, so it asks here, once. Nothing
+				is recorded until you turn on voice input in the chat.
+			</p>
+			<button id="allow" type="button">Allow microphone</button>
+		</main>
+	</body>
+</html>

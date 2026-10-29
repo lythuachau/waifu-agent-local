@@ -1,0 +1,11 @@
+{
+    "extName": {
+        "message": "Waifu Agent"
+    },
+    "extDescription": {
+        "message": "Your anime AI companion in the side panel: she chats, sees your screen, remembers you, and does web tasks for you."
+    },
+    "extActionTitle": {
+        "message": "Open Waifu Agent"
+    }
+}

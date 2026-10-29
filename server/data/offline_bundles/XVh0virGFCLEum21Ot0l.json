@@ -1,0 +1,65 @@
+{
+  "actions": {
+    "speaking_surprise": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/XVh0virGFCLEum21Ot0l/vid_speaking_surprise_acafc8e0-ccaa-4b73-b40f-d9d233d823f7_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/XVh0virGFCLEum21Ot0l/vid_speaking_surprise_acafc8e0-ccaa-4b73-b40f-d9d233d823f7_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking Surprise",
+      "step_size": 5
+    },
+    "speaking_excited": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/XVh0virGFCLEum21Ot0l/vid_speaking_excited_e9b49439-250d-4955-ac35-65a944d2b8a8_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/XVh0virGFCLEum21Ot0l/vid_speaking_excited_e9b49439-250d-4955-ac35-65a944d2b8a8_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking Excited",
+      "step_size": 5
+    },
+    "listening": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/XVh0virGFCLEum21Ot0l/vid_listening_1de436b6-d0f9-4615-89a9-39c3bc090871_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/XVh0virGFCLEum21Ot0l/vid_listening_1de436b6-d0f9-4615-89a9-39c3bc090871_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Listening",
+      "step_size": 5
+    },
+    "speaking": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/XVh0virGFCLEum21Ot0l/vid_speaking_7b744068-c32a-4cdf-8fea-dd9e3e77eb04_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/XVh0virGFCLEum21Ot0l/vid_speaking_7b744068-c32a-4cdf-8fea-dd9e3e77eb04_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking",
+      "step_size": 5
+    }
+  },
+  "transparent_background": false
+}

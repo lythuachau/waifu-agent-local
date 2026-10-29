@@ -1,0 +1,72 @@
+{
+  "actions": {
+    "clap": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/GDoFGEi43FLo5q4Vx2ek/vid_clap_6231a408-ea8d-4326-8775-5a68e1ece0ed.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Clap",
+      "step_size": 5
+    },
+    "speaking_surprise": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/GDoFGEi43FLo5q4Vx2ek/vid_speaking_surprise_dc12edfa-9ea9-42f5-a6c9-ea816999f889_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/GDoFGEi43FLo5q4Vx2ek/vid_speaking_surprise_dc12edfa-9ea9-42f5-a6c9-ea816999f889_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking Surprise",
+      "step_size": 5
+    },
+    "wave_hand": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/GDoFGEi43FLo5q4Vx2ek/vid_wave_hand_4d00beeb-b4e7-4fb3-8283-696144d92947.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Wave Hand",
+      "step_size": 5
+    },
+    "listening": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/GDoFGEi43FLo5q4Vx2ek/vid_listening_a91697e1-9d65-46fa-89db-d70a4edc3efe_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/GDoFGEi43FLo5q4Vx2ek/vid_listening_a91697e1-9d65-46fa-89db-d70a4edc3efe_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Listening",
+      "step_size": 5
+    },
+    "speaking": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/GDoFGEi43FLo5q4Vx2ek/vid_speaking_cbe2b644-e42b-4b52-812c-668e95300fd2_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/GDoFGEi43FLo5q4Vx2ek/vid_speaking_cbe2b644-e42b-4b52-812c-668e95300fd2_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking",
+      "step_size": 5
+    }
+  },
+  "transparent_background": false
+}

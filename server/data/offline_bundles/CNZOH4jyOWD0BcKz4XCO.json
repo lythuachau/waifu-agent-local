@@ -1,0 +1,65 @@
+{
+  "actions": {
+    "speaking_excited": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/CNZOH4jyOWD0BcKz4XCO/vid_speaking_excited_ec01a54c-1c27-4406-b4d9-03da036be007_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/CNZOH4jyOWD0BcKz4XCO/vid_speaking_excited_ec01a54c-1c27-4406-b4d9-03da036be007_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking Excited",
+      "step_size": 5
+    },
+    "listening": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/CNZOH4jyOWD0BcKz4XCO/vid_listening_6ac63739-5974-4800-96be-9609aaf04f35_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/CNZOH4jyOWD0BcKz4XCO/vid_listening_6ac63739-5974-4800-96be-9609aaf04f35_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Listening",
+      "step_size": 5
+    },
+    "speaking": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/CNZOH4jyOWD0BcKz4XCO/vid_speaking_b60beff0-a49c-461e-9f33-c044cc8990f3_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/CNZOH4jyOWD0BcKz4XCO/vid_speaking_b60beff0-a49c-461e-9f33-c044cc8990f3_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking",
+      "step_size": 5
+    },
+    "speaking_sad": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/CNZOH4jyOWD0BcKz4XCO/vid_speaking_sad_27a49005-54b1-40ce-89ec-0fea245308d4_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/CNZOH4jyOWD0BcKz4XCO/vid_speaking_sad_27a49005-54b1-40ce-89ec-0fea245308d4_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking Sad",
+      "step_size": 5
+    }
+  },
+  "transparent_background": false
+}

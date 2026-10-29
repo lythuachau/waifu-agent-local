@@ -1,0 +1,203 @@
+{
+  "default_edge": "ja-JP-NanamiNeural",
+  "voices": {
+    "28d0e1eb-e92e-4360-acc5-cda4776f720a": {
+      "provider": "cartesia",
+      "edge": "ja-JP-NanamiNeural",
+      "label": "Zera / Em Mar",
+      "lang": "ja"
+    },
+    "fb8e062b-30dd-4792-9b89-e93d802b3b6f": {
+      "provider": "cartesia",
+      "edge": "ja-JP-AoiNeural",
+      "label": "Rinka",
+      "lang": "ja"
+    },
+    "6985e0ec-a82f-43bd-91e9-5a1c96f71fbe": {
+      "provider": "cartesia",
+      "edge": "ja-JP-MayuNeural",
+      "label": "Haru",
+      "lang": "ja"
+    },
+    "a8edab71-5925-4379-8007-636764211659": {
+      "provider": "cartesia",
+      "edge": "ja-JP-ShioriNeural",
+      "label": "Chika",
+      "lang": "ja"
+    },
+    "b99c8205-92d3-4d6d-b980-86eac9a403f2": {
+      "provider": "cartesia",
+      "edge": "ja-JP-NanamiNeural",
+      "label": "Mizune",
+      "lang": "ja"
+    },
+    "e9cd42a1-3651-4dd1-ba36-612479f56fa8": {
+      "provider": "cartesia",
+      "edge": "ja-JP-AoiNeural",
+      "label": "Yumi",
+      "lang": "ja"
+    },
+    "e22e8b34-eaa5-4a33-956b-0e33c3f0ca40": {
+      "provider": "cartesia",
+      "edge": "en-US-AnaNeural",
+      "label": "Pico",
+      "lang": "en"
+    },
+    "a7940bdb-d8de-4273-a6f9-b5a9543ce062": {
+      "provider": "cartesia",
+      "edge": "en-US-AndrewNeural",
+      "label": "Ren",
+      "lang": "en"
+    },
+    "14350ce9-23fa-4681-bdd4-b28c12972d73": {
+      "provider": "cartesia",
+      "edge": "ja-JP-MayuNeural",
+      "label": "Rem",
+      "lang": "ja"
+    },
+    "7e969538-f86f-415a-ab78-c80a92ea9dd3": {
+      "provider": "cartesia",
+      "edge": "en-US-JennyNeural",
+      "label": "Judy Hopps",
+      "lang": "en"
+    },
+    "32051674-aef5-4bb3-8488-e88f194dd359": {
+      "provider": "cartesia",
+      "edge": "ja-JP-NanamiNeural",
+      "label": "Raiden shogun",
+      "lang": "ja"
+    },
+    "eb066dcd-f736-4c0f-8196-b6eb4949a9b4": {
+      "provider": "cartesia",
+      "edge": "ja-JP-AoiNeural",
+      "label": "Raiden Shogun",
+      "lang": "ja"
+    },
+    "ba301706-ea97-4328-a27f-71699ec2482d": {
+      "provider": "cartesia",
+      "edge": "en-US-AvaNeural",
+      "label": "Arya",
+      "lang": "en"
+    },
+    "6c08a848-6ee7-4fdf-a0bc-2bccb43c47a4": {
+      "provider": "cartesia",
+      "edge": "ja-JP-NanamiNeural",
+      "label": "Nakano Miku",
+      "lang": "ja"
+    },
+    "41b7650d-c88d-4d97-b2ab-1d989b13fd8d": {
+      "provider": "cartesia",
+      "edge": "ja-JP-ShioriNeural",
+      "label": "yui",
+      "lang": "ja"
+    },
+    "894ce547-50a1-466a-b17f-6b9e2f3dadde": {
+      "provider": "cartesia",
+      "edge": "zh-CN-XiaoxiaoNeural",
+      "label": "Keqing",
+      "lang": "zh"
+    },
+    "c32b5154-8f89-4117-8b69-9b2e2973ca31": {
+      "provider": "cartesia",
+      "edge": "zh-CN-XiaoyiNeural",
+      "label": "Keqing (alt)",
+      "lang": "zh"
+    },
+    "e67265a6-31d6-4a3e-ac4b-fe664e8b0eda": {
+      "provider": "cartesia",
+      "edge": "en-GB-SoniaNeural",
+      "label": "Rita Rossweisse",
+      "lang": "en"
+    },
+    "e43510d7-f295-4984-a1bd-0e5c167e136d": {
+      "provider": "cartesia",
+      "edge": "ja-JP-MayuNeural",
+      "label": "Kurumi",
+      "lang": "ja"
+    },
+    "339a92d4-b9b9-465d-9495-f11c94788a8b": {
+      "provider": "cartesia",
+      "edge": "ja-JP-AoiNeural",
+      "label": "Hatsune Miku",
+      "lang": "ja"
+    },
+    "zw_minimax_voice_M8WDG3dSF76jLPrQyjM8": {
+      "provider": "minimax",
+      "edge": "ja-JP-NanamiNeural",
+      "label": "Tohka Yatogami",
+      "lang": "ja"
+    },
+    "zw_minimax_voice_hS2Tm38wM5sC6qjOxL38": {
+      "provider": "minimax",
+      "edge": "en-US-AvaNeural",
+      "label": "Elaina / Misaki",
+      "lang": "en"
+    },
+    "zw_minimax_voice_KdnWLmgBuIQ1O0vLRRVg": {
+      "provider": "minimax",
+      "edge": "ja-JP-AoiNeural",
+      "label": "Mitsuri Kanroji",
+      "lang": "ja"
+    },
+    "ShiinaMahiru_61114a76a76f": {
+      "provider": "minimax",
+      "edge": "vi-VN-HoaiMyNeural",
+      "label": "Shiina Mahiru",
+      "lang": "vi"
+    },
+    "zw_minimax_voice_N2El4XA73CpnMZEreDGc": {
+      "provider": "minimax",
+      "edge": "ja-JP-ShioriNeural",
+      "label": "Nakano Nino",
+      "lang": "ja"
+    },
+    "zera-local": {
+      "provider": "minimax",
+      "edge": "ja-JP-NanamiNeural",
+      "label": "Zera (local alias)",
+      "lang": "ja"
+    },
+    "rinka-local": {
+      "provider": "minimax",
+      "edge": "ja-JP-AoiNeural",
+      "label": "Rinka (local alias)",
+      "lang": "ja"
+    },
+    "haru-local": {
+      "provider": "minimax",
+      "edge": "ja-JP-MayuNeural",
+      "label": "Haru (local alias)",
+      "lang": "ja"
+    },
+    "chika-local": {
+      "provider": "minimax",
+      "edge": "ja-JP-ShioriNeural",
+      "label": "Chika (local alias)",
+      "lang": "ja"
+    },
+    "mizune-local": {
+      "provider": "minimax",
+      "edge": "ja-JP-NanamiNeural",
+      "label": "Mizune (local alias)",
+      "lang": "ja"
+    },
+    "yumi-local": {
+      "provider": "minimax",
+      "edge": "ja-JP-AoiNeural",
+      "label": "Yumi (local alias)",
+      "lang": "ja"
+    },
+    "pico-local": {
+      "provider": "minimax",
+      "edge": "en-US-AnaNeural",
+      "label": "Pico (local alias)",
+      "lang": "en"
+    },
+    "ren-local": {
+      "provider": "minimax",
+      "edge": "en-US-AndrewNeural",
+      "label": "Ren (local alias)",
+      "lang": "en"
+    }
+  }
+}

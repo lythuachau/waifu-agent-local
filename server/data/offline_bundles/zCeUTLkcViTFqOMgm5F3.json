@@ -1,0 +1,35 @@
+{
+  "actions": {
+    "listening": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/zCeUTLkcViTFqOMgm5F3/vid_listening_7f148565-17a3-4fca-ab86-9763a485e364_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/zCeUTLkcViTFqOMgm5F3/vid_listening_7f148565-17a3-4fca-ab86-9763a485e364_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Listening",
+      "step_size": 5
+    },
+    "speaking": {
+      "bundle": {
+        "main": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/zCeUTLkcViTFqOMgm5F3/vid_speaking_be3bb153-1be3-4253-a61d-5430dcac4820_loop.zai"
+        },
+        "intro": {
+          "alpha": null,
+          "rgb": "http://127.0.0.1:8787/static/zai/zCeUTLkcViTFqOMgm5F3/vid_speaking_be3bb153-1be3-4253-a61d-5430dcac4820_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking",
+      "step_size": 5
+    }
+  },
+  "transparent_background": false
+}

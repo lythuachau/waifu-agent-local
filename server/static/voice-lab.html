@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Original voices — research pack</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#161014; --card:#23181e; --line:#3a2a32; --ink:#f4e9e1; --muted:#b9a49a; --accent:#e8b4a2; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:960px; margin:0 auto; padding:32px 18px 80px; }
+  h1 { font-size:24px; margin:0 0 8px; }
+  .sub { color:var(--muted); margin:0 0 22px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:12px; }
+  .name { font-weight:650; }
+  .meta { font-size:12px; color:var(--muted); margin:4px 0 10px; word-break:break-all; }
+  audio { width:100%; margin:4px 0; }
+  label { font-size:12px; color:var(--muted); display:block; margin-top:8px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Giọng gốc — research pack</h1>
+  <p class="sub">
+    <code>live.*</code> = inference Cartesia/Minimax thật.
+    <code>cdn_*.wav</code> = clip train public (không phải engine).
+    Chat realtime: <a href="/settings">/settings</a> → Gốc ZeroWeight.
+  </p>
+  <div id="list">Đang tải catalog…</div>
+</main>
+<script>
+fetch("/static/voices/catalog.json", { cache: "no-store" })
+  .then((r) => r.json())
+  .then((cat) => {
+    const el = document.getElementById("list");
+    el.innerHTML = "";
+    for (const v of cat.voices || []) {
+      const card = document.createElement("section");
+      card.className = "card";
+      const live = v.live && v.live.file
+        ? `<label>Live ${v.provider}</label><audio controls src="/static/voices/${v.voice_id}/${v.live.file}"></audio>`
+        : `<label>Live</label><p class="meta">${(v.live && v.live.error) || "không có"}</p>`;
+      const cdn = (v.cdn_clips || []).filter((c) => c.file).map((c, i) =>
+        `<label>CDN train ${i + 1}</label><audio controls src="/static/voices/${v.voice_id}/${c.file}"></audio>`
+      ).join("") || `<p class="meta">Không có dump train public cho id này.</p>`;
+      card.innerHTML = `<div class="name">${v.label}</div>
+        <div class="meta">${v.provider} · ${v.lang} · ${v.voice_id}</div>
+        ${live}${cdn}`;
+      el.appendChild(card);
+    }
+  })
+  .catch((e) => { document.getElementById("list").textContent = String(e); });
+</script>
+</body>
+</html>

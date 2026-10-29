@@ -1,0 +1,463 @@
+{
+  "created": "2026-10-29T05:48:20Z",
+  "note": "cdn_*.wav = public training cache. live.* = original Cartesia/Minimax inference via ZeroWeight speech API.",
+  "voices": [
+    {
+      "voice_id": "28d0e1eb-e92e-4360-acc5-cda4776f720a",
+      "label": "Zera / Em Mar",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 102978,
+          "cdn_key": "voice/28d0e1eb-e92e-4360-acc5-cda4776f720a/cartesia/0b28e925-a026-4e1a-b653-cdd33d86215f.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 330348,
+          "cdn_key": "voice/28d0e1eb-e92e-4360-acc5-cda4776f720a/cartesia/0fbe1239-9242-4f29-9d24-5ad1e7d4d141.wav"
+        }
+      ],
+      "live": {
+        "file": "live.wav",
+        "bytes": 275228,
+        "raw_bytes": 550368,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "fb8e062b-30dd-4792-9b89-e93d802b3b6f",
+      "label": "Rinka",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 261116,
+        "raw_bytes": 522144,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "6985e0ec-a82f-43bd-91e9-5a1c96f71fbe",
+      "label": "Haru",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 254060,
+        "raw_bytes": 508032,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "a8edab71-5925-4379-8007-636764211659",
+      "label": "Chika",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 247004,
+        "raw_bytes": 493920,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "b99c8205-92d3-4d6d-b980-86eac9a403f2",
+      "label": "Mizune",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 247004,
+        "raw_bytes": 493920,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "e9cd42a1-3651-4dd1-ba36-612479f56fa8",
+      "label": "Yumi",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 268172,
+        "raw_bytes": 536256,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "e22e8b34-eaa5-4a33-956b-0e33c3f0ca40",
+      "label": "Pico",
+      "provider": "cartesia",
+      "lang": "en",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 247004,
+        "raw_bytes": 493920,
+        "text": "Hello, this is the original cloned voice."
+      }
+    },
+    {
+      "voice_id": "a7940bdb-d8de-4273-a6f9-b5a9543ce062",
+      "label": "Ren",
+      "provider": "cartesia",
+      "lang": "en",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 247004,
+        "raw_bytes": 493920,
+        "text": "Hello, this is the original cloned voice."
+      }
+    },
+    {
+      "voice_id": "14350ce9-23fa-4681-bdd4-b28c12972d73",
+      "label": "Rem",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 1567506,
+          "cdn_key": "voice/14350ce9-23fa-4681-bdd4-b28c12972d73/cartesia/0068b35e-1cb9-4d5d-99fc-d45dfa8dd7d0.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 642424,
+          "cdn_key": "voice/14350ce9-23fa-4681-bdd4-b28c12972d73/cartesia/006f52da-e808-48d6-a1a1-079f60e0f1ea.wav"
+        }
+      ],
+      "live": {
+        "file": "live.wav",
+        "bytes": 254060,
+        "raw_bytes": 508032,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "7e969538-f86f-415a-ab78-c80a92ea9dd3",
+      "label": "Judy Hopps",
+      "provider": "cartesia",
+      "lang": "en",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 557718,
+          "cdn_key": "voice/7e969538-f86f-415a-ab78-c80a92ea9dd3/cartesia/15ff71a6-1501-4fcc-89c2-7b45a0be85f3.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 250100,
+          "cdn_key": "voice/7e969538-f86f-415a-ab78-c80a92ea9dd3/cartesia/247c4d05-737f-43c0-9a90-146937a58e33.wav"
+        }
+      ],
+      "live": {
+        "file": "live.wav",
+        "bytes": 247004,
+        "raw_bytes": 493920,
+        "text": "Hello, this is the original cloned voice."
+      }
+    },
+    {
+      "voice_id": "32051674-aef5-4bb3-8488-e88f194dd359",
+      "label": "Raiden shogun",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 172082,
+          "cdn_key": "voice/32051674-aef5-4bb3-8488-e88f194dd359/cartesia/08f89b8d-cf45-4fa8-942d-90c389710bae.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 495302,
+          "cdn_key": "voice/32051674-aef5-4bb3-8488-e88f194dd359/cartesia/1e435059-cc8e-4016-b294-5110a1e96b01.wav"
+        }
+      ],
+      "live": {
+        "file": "live.wav",
+        "bytes": 282284,
+        "raw_bytes": 564480,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "eb066dcd-f736-4c0f-8196-b6eb4949a9b4",
+      "label": "Raiden Shogun",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 239948,
+        "raw_bytes": 479808,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "ba301706-ea97-4328-a27f-71699ec2482d",
+      "label": "Arya",
+      "provider": "cartesia",
+      "lang": "en",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 247004,
+        "raw_bytes": 493920,
+        "text": "Hello, this is the original cloned voice."
+      }
+    },
+    {
+      "voice_id": "6c08a848-6ee7-4fdf-a0bc-2bccb43c47a4",
+      "label": "Nakano Miku",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 285764,
+          "cdn_key": "voice/6c08a848-6ee7-4fdf-a0bc-2bccb43c47a4/cartesia/000bc078-ba98-44fc-864c-51c498bc02d8.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 475240,
+          "cdn_key": "voice/6c08a848-6ee7-4fdf-a0bc-2bccb43c47a4/cartesia/00362833-24cb-46fb-a0f7-b7ee7c9377d8.wav"
+        }
+      ],
+      "live": {
+        "file": "live.wav",
+        "bytes": 261116,
+        "raw_bytes": 522144,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "41b7650d-c88d-4d97-b2ab-1d989b13fd8d",
+      "label": "yui",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 163164,
+          "cdn_key": "voice/41b7650d-c88d-4d97-b2ab-1d989b13fd8d/cartesia/0c3b8d9b-15a7-4ccf-8548-88a328efd73d.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 328120,
+          "cdn_key": "voice/41b7650d-c88d-4d97-b2ab-1d989b13fd8d/cartesia/11d3ec6f-0801-4e6b-8b5d-f334fea114ba.wav"
+        }
+      ],
+      "live": {
+        "file": "live.wav",
+        "bytes": 303452,
+        "raw_bytes": 606816,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "894ce547-50a1-466a-b17f-6b9e2f3dadde",
+      "label": "Keqing",
+      "provider": "cartesia",
+      "lang": "zh",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 204668,
+        "raw_bytes": 409248,
+        "text": "你好，这是原始克隆音色。"
+      }
+    },
+    {
+      "voice_id": "c32b5154-8f89-4117-8b69-9b2e2973ca31",
+      "label": "Keqing (alt)",
+      "provider": "cartesia",
+      "lang": "zh",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 299140,
+          "cdn_key": "voice/c32b5154-8f89-4117-8b69-9b2e2973ca31/cartesia/01482623-50b1-4b25-87ca-e0767ccc102e.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 250100,
+          "cdn_key": "voice/c32b5154-8f89-4117-8b69-9b2e2973ca31/cartesia/0af042c8-5d7d-4cbf-9143-bc7a938c9b75.wav"
+        }
+      ],
+      "live": {
+        "file": "live.wav",
+        "bytes": 218780,
+        "raw_bytes": 437472,
+        "text": "你好，这是原始克隆音色。"
+      }
+    },
+    {
+      "voice_id": "e67265a6-31d6-4a3e-ac4b-fe664e8b0eda",
+      "label": "Rita Rossweisse",
+      "provider": "cartesia",
+      "lang": "en",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.wav",
+        "bytes": 225836,
+        "raw_bytes": 451584,
+        "text": "Hello, this is the original cloned voice."
+      }
+    },
+    {
+      "voice_id": "e43510d7-f295-4984-a1bd-0e5c167e136d",
+      "label": "Kurumi",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 2860392,
+          "cdn_key": "voice/e43510d7-f295-4984-a1bd-0e5c167e136d/cartesia/0077d9d0-69a9-46a3-b376-8d70ccdc20e2.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 883170,
+          "cdn_key": "voice/e43510d7-f295-4984-a1bd-0e5c167e136d/cartesia/01918a1e-b7c7-4618-9972-60e71ddc5f37.wav"
+        }
+      ],
+      "live": {
+        "file": "live.wav",
+        "bytes": 296396,
+        "raw_bytes": 592704,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "339a92d4-b9b9-465d-9495-f11c94788a8b",
+      "label": "Hatsune Miku",
+      "provider": "cartesia",
+      "lang": "ja",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 368244,
+          "cdn_key": "voice/339a92d4-b9b9-465d-9495-f11c94788a8b/cartesia/000d358d-9538-4a90-810e-f202c5026c13.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 403910,
+          "cdn_key": "voice/339a92d4-b9b9-465d-9495-f11c94788a8b/cartesia/00a161e3-fe9e-44d2-aabc-6ee067d5c4d7.wav"
+        }
+      ],
+      "live": {
+        "file": "live.wav",
+        "bytes": 247004,
+        "raw_bytes": 493920,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "zw_minimax_voice_M8WDG3dSF76jLPrQyjM8",
+      "label": "Tohka Yatogami",
+      "provider": "minimax",
+      "lang": "ja",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.mp3",
+        "bytes": 53613,
+        "raw_bytes": 53613,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "zw_minimax_voice_hS2Tm38wM5sC6qjOxL38",
+      "label": "Elaina / Misaki",
+      "provider": "minimax",
+      "lang": "en",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 438158,
+          "cdn_key": "voice/zw_minimax_voice_hS2Tm38wM5sC6qjOxL38/minimax/010e287f-365e-431c-bf06-fe205695d942.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 192212,
+          "cdn_key": "voice/zw_minimax_voice_hS2Tm38wM5sC6qjOxL38/minimax/0151e21f-4552-4c03-87ec-e7794479f35c.wav"
+        }
+      ],
+      "live": {
+        "file": "live.mp3",
+        "bytes": 52461,
+        "raw_bytes": 52461,
+        "text": "Hello, this is the original cloned voice."
+      }
+    },
+    {
+      "voice_id": "zw_minimax_voice_KdnWLmgBuIQ1O0vLRRVg",
+      "label": "Mitsuri Kanroji",
+      "provider": "minimax",
+      "lang": "ja",
+      "cdn_clips": [],
+      "live": {
+        "file": "live.mp3",
+        "bytes": 54765,
+        "raw_bytes": 54765,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    },
+    {
+      "voice_id": "ShiinaMahiru_61114a76a76f",
+      "label": "Shiina Mahiru",
+      "provider": "minimax",
+      "lang": "vi",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 77040,
+          "cdn_key": "voice/ShiinaMahiru_61114a76a76f/minimax/0077d044-335a-46ef-822e-8dce068b4a97.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 233080,
+          "cdn_key": "voice/ShiinaMahiru_61114a76a76f/minimax/00c7c5e8-4b3b-4ccd-a35a-4a3338538df8.wav"
+        }
+      ],
+      "live": {
+        "file": "live.mp3",
+        "bytes": 41517,
+        "raw_bytes": 41517,
+        "text": "Xin chào, đây là giọng clone gốc."
+      }
+    },
+    {
+      "voice_id": "zw_minimax_voice_N2El4XA73CpnMZEreDGc",
+      "label": "Nakano Nino",
+      "provider": "minimax",
+      "lang": "ja",
+      "cdn_clips": [
+        {
+          "file": "cdn_1.wav",
+          "bytes": 391346,
+          "cdn_key": "voice/zw_minimax_voice_N2El4XA73CpnMZEreDGc/minimax/0021c73e-4b93-418f-9892-89597fb2291a.wav"
+        },
+        {
+          "file": "cdn_2.wav",
+          "bytes": 118652,
+          "cdn_key": "voice/zw_minimax_voice_N2El4XA73CpnMZEreDGc/minimax/0055a38a-b595-4523-bc32-0688acecad77.wav"
+        }
+      ],
+      "live": {
+        "file": "live.mp3",
+        "bytes": 47277,
+        "raw_bytes": 47277,
+        "text": "こんにちは、これは元の声のテストです。"
+      }
+    }
+  ]
+}

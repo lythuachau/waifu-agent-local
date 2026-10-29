@@ -1,0 +1,32 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# secrets — never push the operator Zw_ key
+server/data/zw_key.txt
+.env
+.env.*
+
+# local avatar clips (~3 GB). Keep on disk; GitHub 100 MB/file and repo size caps.
+server/static/zai/
+sample.zai
+
+# probe / debug leftovers
+*.stderr.txt
+live-renderer.dom.html
+live-renderer.png
+live-renderer.stderr.txt
+offline-renderer.png
+offline-renderer-canvas.png
+preview.png
+stage.png
+renderer-probe.html.out
+renderer-strings.txt
+tts-sample.bin
+avatar-frame-js.txt
+
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -1,0 +1,68 @@
+{
+  "actions": {
+    "think": {
+      "bundle": {
+        "main": {
+          "alpha": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_think_acffb052-a7b0-41ad-86b1-0b770d962063.alpha.zai",
+          "rgb": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_think_acffb052-a7b0-41ad-86b1-0b770d962063.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Think",
+      "step_size": 5
+    },
+    "wave_hand": {
+      "bundle": {
+        "main": {
+          "alpha": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_wave_hand_df01dba4-84b5-43d6-bc84-d063ab307270.alpha.zai",
+          "rgb": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_wave_hand_df01dba4-84b5-43d6-bc84-d063ab307270.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Wave Hand",
+      "step_size": 5
+    },
+    "listening": {
+      "bundle": {
+        "main": {
+          "alpha": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_loop.alpha.zai",
+          "rgb": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_loop.zai"
+        },
+        "intro": {
+          "alpha": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_intro.alpha.zai",
+          "rgb": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Listening",
+      "step_size": 5
+    },
+    "speaking": {
+      "bundle": {
+        "main": {
+          "alpha": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_speaking_993733c0-235b-4577-9df6-e2317867b941_loop.alpha.zai",
+          "rgb": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_speaking_993733c0-235b-4577-9df6-e2317867b941_loop.zai"
+        },
+        "intro": {
+          "alpha": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_speaking_993733c0-235b-4577-9df6-e2317867b941_intro.alpha.zai",
+          "rgb": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_speaking_993733c0-235b-4577-9df6-e2317867b941_intro.zai"
+        }
+      },
+      "kind": "looped",
+      "display_name": "Speaking",
+      "step_size": 5
+    },
+    "poke_reaction": {
+      "bundle": {
+        "main": {
+          "alpha": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_poke_reaction_1fe8cd6e-7fe2-47a2-acb9-d0c1fc4798cd.alpha.zai",
+          "rgb": "http://127.0.0.1:8787/static/zai/NKPwus9TulfkZWjL2cAF/vid_poke_reaction_1fe8cd6e-7fe2-47a2-acb9-d0c1fc4798cd.zai"
+        }
+      },
+      "kind": "oneshot",
+      "display_name": "Poke Reaction",
+      "step_size": 5
+    }
+  },
+  "transparent_background": true
+}

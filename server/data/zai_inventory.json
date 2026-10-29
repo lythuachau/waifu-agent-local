@@ -1,0 +1,975 @@
+[
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_speaking_excited_16c93fe1-3ada-473c-80f7-29618be55a3f_loop.alpha.zai",
+    "bytes": 3488837,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/speaking_excited/versions/G4hD5MWxWQicoYsC2VeZ/vid_speaking_excited_16c93fe1-3ada-473c-80f7-29618be55a3f_loop.alpha.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_speaking_excited_16c93fe1-3ada-473c-80f7-29618be55a3f_loop.zai",
+    "bytes": 25321451,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/speaking_excited/versions/G4hD5MWxWQicoYsC2VeZ/vid_speaking_excited_16c93fe1-3ada-473c-80f7-29618be55a3f_loop.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_speaking_excited_16c93fe1-3ada-473c-80f7-29618be55a3f_intro.alpha.zai",
+    "bytes": 498431,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/speaking_excited/versions/G4hD5MWxWQicoYsC2VeZ/vid_speaking_excited_16c93fe1-3ada-473c-80f7-29618be55a3f_intro.alpha.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_speaking_excited_16c93fe1-3ada-473c-80f7-29618be55a3f_intro.zai",
+    "bytes": 3512706,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/speaking_excited/versions/G4hD5MWxWQicoYsC2VeZ/vid_speaking_excited_16c93fe1-3ada-473c-80f7-29618be55a3f_intro.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_wave_hand_a459b5e1-6b27-4079-ba3f-11132eeb1a9d.alpha.zai",
+    "bytes": 1011661,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/wave_hand/versions/XZcAmy1mKlIw0QFi94Um/vid_wave_hand_a459b5e1-6b27-4079-ba3f-11132eeb1a9d.alpha.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_wave_hand_a459b5e1-6b27-4079-ba3f-11132eeb1a9d.zai",
+    "bytes": 6612796,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/wave_hand/versions/XZcAmy1mKlIw0QFi94Um/vid_wave_hand_a459b5e1-6b27-4079-ba3f-11132eeb1a9d.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_listening_b232816f-634e-470d-9333-1702b6f6d0ef_loop.alpha.zai",
+    "bytes": 3649197,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/listening/versions/FJkxf9QhYVRRQKWyI8ny/vid_listening_b232816f-634e-470d-9333-1702b6f6d0ef_loop.alpha.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_listening_b232816f-634e-470d-9333-1702b6f6d0ef_loop.zai",
+    "bytes": 28675194,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/listening/versions/FJkxf9QhYVRRQKWyI8ny/vid_listening_b232816f-634e-470d-9333-1702b6f6d0ef_loop.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_listening_b232816f-634e-470d-9333-1702b6f6d0ef_intro.alpha.zai",
+    "bytes": 11136,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/listening/versions/FJkxf9QhYVRRQKWyI8ny/vid_listening_b232816f-634e-470d-9333-1702b6f6d0ef_intro.alpha.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_listening_b232816f-634e-470d-9333-1702b6f6d0ef_intro.zai",
+    "bytes": 127484,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/listening/versions/FJkxf9QhYVRRQKWyI8ny/vid_listening_b232816f-634e-470d-9333-1702b6f6d0ef_intro.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_speaking_627506d9-1fa7-43f0-a2e0-3af1f870c318_loop.alpha.zai",
+    "bytes": 3650415,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/speaking/versions/vGJhlSjXJDLhPvkM7THy/vid_speaking_627506d9-1fa7-43f0-a2e0-3af1f870c318_loop.alpha.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_speaking_627506d9-1fa7-43f0-a2e0-3af1f870c318_loop.zai",
+    "bytes": 28773860,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/speaking/versions/vGJhlSjXJDLhPvkM7THy/vid_speaking_627506d9-1fa7-43f0-a2e0-3af1f870c318_loop.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_speaking_627506d9-1fa7-43f0-a2e0-3af1f870c318_intro.alpha.zai",
+    "bytes": 351450,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/speaking/versions/vGJhlSjXJDLhPvkM7THy/vid_speaking_627506d9-1fa7-43f0-a2e0-3af1f870c318_intro.alpha.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_speaking_627506d9-1fa7-43f0-a2e0-3af1f870c318_intro.zai",
+    "bytes": 2610731,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/speaking/versions/vGJhlSjXJDLhPvkM7THy/vid_speaking_627506d9-1fa7-43f0-a2e0-3af1f870c318_intro.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_poke_reaction_7fe38a78-55b5-417a-bc3f-4a440647e6c7.alpha.zai",
+    "bytes": 1147597,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/poke_reaction/versions/JWxV4vRb2QFr0rySRuxD/vid_poke_reaction_7fe38a78-55b5-417a-bc3f-4a440647e6c7.alpha.zai"
+  },
+  {
+    "avatar": "JAcOLTlkriBlkfuuGSy9",
+    "name": "Rinka",
+    "file": "vid_poke_reaction_7fe38a78-55b5-417a-bc3f-4a440647e6c7.zai",
+    "bytes": 7404693,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/JAcOLTlkriBlkfuuGSy9/actions/poke_reaction/versions/JWxV4vRb2QFr0rySRuxD/vid_poke_reaction_7fe38a78-55b5-417a-bc3f-4a440647e6c7.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_clap_35200070-2d3c-4019-8d1a-f46e43f15319.alpha.zai",
+    "bytes": 900309,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/clap/versions/KOIz0ZvzRaOnFEV8dmR1/vid_clap_35200070-2d3c-4019-8d1a-f46e43f15319.alpha.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_clap_35200070-2d3c-4019-8d1a-f46e43f15319.zai",
+    "bytes": 5115529,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/clap/versions/KOIz0ZvzRaOnFEV8dmR1/vid_clap_35200070-2d3c-4019-8d1a-f46e43f15319.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_wave_hand_48408d9f-eb0c-4a0d-bc72-313abb6792e1.alpha.zai",
+    "bytes": 954864,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/wave_hand/versions/8bBHhyUPMvjjJfzaiLNL/vid_wave_hand_48408d9f-eb0c-4a0d-bc72-313abb6792e1.alpha.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_wave_hand_48408d9f-eb0c-4a0d-bc72-313abb6792e1.zai",
+    "bytes": 5257698,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/wave_hand/versions/8bBHhyUPMvjjJfzaiLNL/vid_wave_hand_48408d9f-eb0c-4a0d-bc72-313abb6792e1.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_listening_43659f1d-7aa7-4739-818f-b51fc1705eae_loop.alpha.zai",
+    "bytes": 2221258,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/listening/versions/ZdpRdGwgNawoqq0IWWVC/vid_listening_43659f1d-7aa7-4739-818f-b51fc1705eae_loop.alpha.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_listening_43659f1d-7aa7-4739-818f-b51fc1705eae_loop.zai",
+    "bytes": 17937978,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/listening/versions/ZdpRdGwgNawoqq0IWWVC/vid_listening_43659f1d-7aa7-4739-818f-b51fc1705eae_loop.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_listening_43659f1d-7aa7-4739-818f-b51fc1705eae_intro.alpha.zai",
+    "bytes": 107145,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/listening/versions/ZdpRdGwgNawoqq0IWWVC/vid_listening_43659f1d-7aa7-4739-818f-b51fc1705eae_intro.alpha.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_listening_43659f1d-7aa7-4739-818f-b51fc1705eae_intro.zai",
+    "bytes": 799253,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/listening/versions/ZdpRdGwgNawoqq0IWWVC/vid_listening_43659f1d-7aa7-4739-818f-b51fc1705eae_intro.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_speaking_a6a5c24e-9c51-4be3-bf30-19257bec9c55_loop.alpha.zai",
+    "bytes": 2890762,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/speaking/versions/yn0UVKwW124dRyNjkyfa/vid_speaking_a6a5c24e-9c51-4be3-bf30-19257bec9c55_loop.alpha.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_speaking_a6a5c24e-9c51-4be3-bf30-19257bec9c55_loop.zai",
+    "bytes": 22225248,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/speaking/versions/yn0UVKwW124dRyNjkyfa/vid_speaking_a6a5c24e-9c51-4be3-bf30-19257bec9c55_loop.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_speaking_a6a5c24e-9c51-4be3-bf30-19257bec9c55_intro.alpha.zai",
+    "bytes": 388028,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/speaking/versions/yn0UVKwW124dRyNjkyfa/vid_speaking_a6a5c24e-9c51-4be3-bf30-19257bec9c55_intro.alpha.zai"
+  },
+  {
+    "avatar": "azZfcV2Nc0UBdxpcESi6",
+    "name": "Haru",
+    "file": "vid_speaking_a6a5c24e-9c51-4be3-bf30-19257bec9c55_intro.zai",
+    "bytes": 2760843,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/azZfcV2Nc0UBdxpcESi6/actions/speaking/versions/yn0UVKwW124dRyNjkyfa/vid_speaking_a6a5c24e-9c51-4be3-bf30-19257bec9c55_intro.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_clap_b91e83f6-ca6d-449f-b564-4d7dcc56e49e.alpha.zai",
+    "bytes": 805334,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/clap/versions/KJhBDriFjZLqZQqaQ2qb/vid_clap_b91e83f6-ca6d-449f-b564-4d7dcc56e49e.alpha.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_clap_b91e83f6-ca6d-449f-b564-4d7dcc56e49e.zai",
+    "bytes": 5206666,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/clap/versions/KJhBDriFjZLqZQqaQ2qb/vid_clap_b91e83f6-ca6d-449f-b564-4d7dcc56e49e.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_speaking_excited_b0aa1e70-ebee-42b7-9f62-bf76c4c06c3e_loop.alpha.zai",
+    "bytes": 2792581,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/speaking_excited/versions/CCMPGlIcWjpQVTXtBG4m/vid_speaking_excited_b0aa1e70-ebee-42b7-9f62-bf76c4c06c3e_loop.alpha.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_speaking_excited_b0aa1e70-ebee-42b7-9f62-bf76c4c06c3e_loop.zai",
+    "bytes": 19864396,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/speaking_excited/versions/CCMPGlIcWjpQVTXtBG4m/vid_speaking_excited_b0aa1e70-ebee-42b7-9f62-bf76c4c06c3e_loop.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_speaking_excited_b0aa1e70-ebee-42b7-9f62-bf76c4c06c3e_intro.alpha.zai",
+    "bytes": 398081,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/speaking_excited/versions/CCMPGlIcWjpQVTXtBG4m/vid_speaking_excited_b0aa1e70-ebee-42b7-9f62-bf76c4c06c3e_intro.alpha.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_speaking_excited_b0aa1e70-ebee-42b7-9f62-bf76c4c06c3e_intro.zai",
+    "bytes": 2699758,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/speaking_excited/versions/CCMPGlIcWjpQVTXtBG4m/vid_speaking_excited_b0aa1e70-ebee-42b7-9f62-bf76c4c06c3e_intro.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_wave_hand_8aa86276-4b58-44f1-a59d-7de17d2b6f00.alpha.zai",
+    "bytes": 877828,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/wave_hand/versions/ncTtq5DB3SrINF5MBvQw/vid_wave_hand_8aa86276-4b58-44f1-a59d-7de17d2b6f00.alpha.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_wave_hand_8aa86276-4b58-44f1-a59d-7de17d2b6f00.zai",
+    "bytes": 5715313,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/wave_hand/versions/ncTtq5DB3SrINF5MBvQw/vid_wave_hand_8aa86276-4b58-44f1-a59d-7de17d2b6f00.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_listening_122d150a-7b6c-4a5d-9d72-3cc53cec7cc3_loop.alpha.zai",
+    "bytes": 2700287,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/listening/versions/ureCLrmVrqCDQp3rdFQC/vid_listening_122d150a-7b6c-4a5d-9d72-3cc53cec7cc3_loop.alpha.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_listening_122d150a-7b6c-4a5d-9d72-3cc53cec7cc3_loop.zai",
+    "bytes": 21802026,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/listening/versions/ureCLrmVrqCDQp3rdFQC/vid_listening_122d150a-7b6c-4a5d-9d72-3cc53cec7cc3_loop.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_listening_122d150a-7b6c-4a5d-9d72-3cc53cec7cc3_intro.alpha.zai",
+    "bytes": 38835,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/listening/versions/ureCLrmVrqCDQp3rdFQC/vid_listening_122d150a-7b6c-4a5d-9d72-3cc53cec7cc3_intro.alpha.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_listening_122d150a-7b6c-4a5d-9d72-3cc53cec7cc3_intro.zai",
+    "bytes": 352230,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/listening/versions/ureCLrmVrqCDQp3rdFQC/vid_listening_122d150a-7b6c-4a5d-9d72-3cc53cec7cc3_intro.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_speaking_ffc2cc67-844f-4303-9e86-0086beee449c_loop.alpha.zai",
+    "bytes": 2501959,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/speaking/versions/0tTNNp0AFK3ih4wxireN/vid_speaking_ffc2cc67-844f-4303-9e86-0086beee449c_loop.alpha.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_speaking_ffc2cc67-844f-4303-9e86-0086beee449c_loop.zai",
+    "bytes": 19728823,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/speaking/versions/0tTNNp0AFK3ih4wxireN/vid_speaking_ffc2cc67-844f-4303-9e86-0086beee449c_loop.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_speaking_ffc2cc67-844f-4303-9e86-0086beee449c_intro.alpha.zai",
+    "bytes": 348547,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/speaking/versions/0tTNNp0AFK3ih4wxireN/vid_speaking_ffc2cc67-844f-4303-9e86-0086beee449c_intro.alpha.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_speaking_ffc2cc67-844f-4303-9e86-0086beee449c_intro.zai",
+    "bytes": 2700137,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/speaking/versions/0tTNNp0AFK3ih4wxireN/vid_speaking_ffc2cc67-844f-4303-9e86-0086beee449c_intro.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_poke_reaction_28c07e04-7798-416f-b8eb-aaa6cc4257ed.alpha.zai",
+    "bytes": 865086,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/poke_reaction/versions/Z10FksTHz4yS3yvEuYbM/vid_poke_reaction_28c07e04-7798-416f-b8eb-aaa6cc4257ed.alpha.zai"
+  },
+  {
+    "avatar": "A7qsCfD7dENPQkCCGm1L",
+    "name": "Chika",
+    "file": "vid_poke_reaction_28c07e04-7798-416f-b8eb-aaa6cc4257ed.zai",
+    "bytes": 5525647,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/A7qsCfD7dENPQkCCGm1L/actions/poke_reaction/versions/Z10FksTHz4yS3yvEuYbM/vid_poke_reaction_28c07e04-7798-416f-b8eb-aaa6cc4257ed.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_embarrassed_07e96f09-240b-4616-9082-478c2f8fd5e7.alpha.zai",
+    "bytes": 1234060,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/embarrassed/versions/W6TSGCk7rGnjwc8KNJyv/vid_embarrassed_07e96f09-240b-4616-9082-478c2f8fd5e7.alpha.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_embarrassed_07e96f09-240b-4616-9082-478c2f8fd5e7.zai",
+    "bytes": 6321045,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/embarrassed/versions/W6TSGCk7rGnjwc8KNJyv/vid_embarrassed_07e96f09-240b-4616-9082-478c2f8fd5e7.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_speaking_excited_a3cd3fc6-b11b-43f6-9669-0cc214a54e0e_loop.alpha.zai",
+    "bytes": 3884022,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/speaking_excited/versions/oYQrQPHR7yJafRcIBG0E/vid_speaking_excited_a3cd3fc6-b11b-43f6-9669-0cc214a54e0e_loop.alpha.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_speaking_excited_a3cd3fc6-b11b-43f6-9669-0cc214a54e0e_loop.zai",
+    "bytes": 25951704,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/speaking_excited/versions/oYQrQPHR7yJafRcIBG0E/vid_speaking_excited_a3cd3fc6-b11b-43f6-9669-0cc214a54e0e_loop.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_speaking_excited_a3cd3fc6-b11b-43f6-9669-0cc214a54e0e_intro.alpha.zai",
+    "bytes": 546849,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/speaking_excited/versions/oYQrQPHR7yJafRcIBG0E/vid_speaking_excited_a3cd3fc6-b11b-43f6-9669-0cc214a54e0e_intro.alpha.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_speaking_excited_a3cd3fc6-b11b-43f6-9669-0cc214a54e0e_intro.zai",
+    "bytes": 3377586,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/speaking_excited/versions/oYQrQPHR7yJafRcIBG0E/vid_speaking_excited_a3cd3fc6-b11b-43f6-9669-0cc214a54e0e_intro.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_wave_hand_49d6f7aa-4141-48b2-a399-5a8b9500998e.alpha.zai",
+    "bytes": 1258043,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/wave_hand/versions/tjMFoyx7MVOsbJSOwblY/vid_wave_hand_49d6f7aa-4141-48b2-a399-5a8b9500998e.alpha.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_wave_hand_49d6f7aa-4141-48b2-a399-5a8b9500998e.zai",
+    "bytes": 6370140,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/wave_hand/versions/tjMFoyx7MVOsbJSOwblY/vid_wave_hand_49d6f7aa-4141-48b2-a399-5a8b9500998e.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_listening_fa455356-f0cc-45c7-a86a-65abdbd4acfc_loop.alpha.zai",
+    "bytes": 3762352,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/listening/versions/loGgA7arc5D11xmwAxcq/vid_listening_fa455356-f0cc-45c7-a86a-65abdbd4acfc_loop.alpha.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_listening_fa455356-f0cc-45c7-a86a-65abdbd4acfc_loop.zai",
+    "bytes": 25373222,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/listening/versions/loGgA7arc5D11xmwAxcq/vid_listening_fa455356-f0cc-45c7-a86a-65abdbd4acfc_loop.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_listening_fa455356-f0cc-45c7-a86a-65abdbd4acfc_intro.alpha.zai",
+    "bytes": 196930,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/listening/versions/loGgA7arc5D11xmwAxcq/vid_listening_fa455356-f0cc-45c7-a86a-65abdbd4acfc_intro.alpha.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_listening_fa455356-f0cc-45c7-a86a-65abdbd4acfc_intro.zai",
+    "bytes": 1187975,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/listening/versions/loGgA7arc5D11xmwAxcq/vid_listening_fa455356-f0cc-45c7-a86a-65abdbd4acfc_intro.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_speaking_59f774d8-a187-40e8-8813-b89312c3a3d4_loop.alpha.zai",
+    "bytes": 3589258,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/speaking/versions/ctUJdQT5r8vJRXKGG0uW/vid_speaking_59f774d8-a187-40e8-8813-b89312c3a3d4_loop.alpha.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_speaking_59f774d8-a187-40e8-8813-b89312c3a3d4_loop.zai",
+    "bytes": 24230042,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/speaking/versions/ctUJdQT5r8vJRXKGG0uW/vid_speaking_59f774d8-a187-40e8-8813-b89312c3a3d4_loop.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_speaking_59f774d8-a187-40e8-8813-b89312c3a3d4_intro.alpha.zai",
+    "bytes": 467185,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/speaking/versions/ctUJdQT5r8vJRXKGG0uW/vid_speaking_59f774d8-a187-40e8-8813-b89312c3a3d4_intro.alpha.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_speaking_59f774d8-a187-40e8-8813-b89312c3a3d4_intro.zai",
+    "bytes": 3059268,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/speaking/versions/ctUJdQT5r8vJRXKGG0uW/vid_speaking_59f774d8-a187-40e8-8813-b89312c3a3d4_intro.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_poke_reaction_9f85eee7-c68f-41bf-bd10-e47223aef8a7.alpha.zai",
+    "bytes": 1274901,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/poke_reaction/versions/g4lAzC2bl5QnIHrT12sr/vid_poke_reaction_9f85eee7-c68f-41bf-bd10-e47223aef8a7.alpha.zai"
+  },
+  {
+    "avatar": "t2WZmCOFvK1pe6dCsn3f",
+    "name": "Mizune",
+    "file": "vid_poke_reaction_9f85eee7-c68f-41bf-bd10-e47223aef8a7.zai",
+    "bytes": 6438355,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/t2WZmCOFvK1pe6dCsn3f/actions/poke_reaction/versions/g4lAzC2bl5QnIHrT12sr/vid_poke_reaction_9f85eee7-c68f-41bf-bd10-e47223aef8a7.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_speaking_excited_bd0af73b-ec52-49d3-900d-60028ffcae0b_loop.alpha.zai",
+    "bytes": 3704708,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/speaking_excited/versions/AaQPAcixNAcYxF5SL61v/vid_speaking_excited_bd0af73b-ec52-49d3-900d-60028ffcae0b_loop.alpha.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_speaking_excited_bd0af73b-ec52-49d3-900d-60028ffcae0b_loop.zai",
+    "bytes": 20630671,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/speaking_excited/versions/AaQPAcixNAcYxF5SL61v/vid_speaking_excited_bd0af73b-ec52-49d3-900d-60028ffcae0b_loop.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_speaking_excited_bd0af73b-ec52-49d3-900d-60028ffcae0b_intro.alpha.zai",
+    "bytes": 687387,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/speaking_excited/versions/AaQPAcixNAcYxF5SL61v/vid_speaking_excited_bd0af73b-ec52-49d3-900d-60028ffcae0b_intro.alpha.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_speaking_excited_bd0af73b-ec52-49d3-900d-60028ffcae0b_intro.zai",
+    "bytes": 3598897,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/speaking_excited/versions/AaQPAcixNAcYxF5SL61v/vid_speaking_excited_bd0af73b-ec52-49d3-900d-60028ffcae0b_intro.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_wave_hand_87b000cf-f33c-4d4d-9391-a45d757a34c7.alpha.zai",
+    "bytes": 1296071,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/wave_hand/versions/XNKpwAYFoSOxmOWHgMeb/vid_wave_hand_87b000cf-f33c-4d4d-9391-a45d757a34c7.alpha.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_wave_hand_87b000cf-f33c-4d4d-9391-a45d757a34c7.zai",
+    "bytes": 6308352,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/wave_hand/versions/XNKpwAYFoSOxmOWHgMeb/vid_wave_hand_87b000cf-f33c-4d4d-9391-a45d757a34c7.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_listening_6a47b060-ec92-4b17-94ad-67692a9afb2b_loop.alpha.zai",
+    "bytes": 4385150,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/listening/versions/6o8OsTUdSQEovbjwDc9S/vid_listening_6a47b060-ec92-4b17-94ad-67692a9afb2b_loop.alpha.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_listening_6a47b060-ec92-4b17-94ad-67692a9afb2b_loop.zai",
+    "bytes": 25476718,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/listening/versions/6o8OsTUdSQEovbjwDc9S/vid_listening_6a47b060-ec92-4b17-94ad-67692a9afb2b_loop.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_listening_6a47b060-ec92-4b17-94ad-67692a9afb2b_intro.alpha.zai",
+    "bytes": 97693,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/listening/versions/6o8OsTUdSQEovbjwDc9S/vid_listening_6a47b060-ec92-4b17-94ad-67692a9afb2b_intro.alpha.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_listening_6a47b060-ec92-4b17-94ad-67692a9afb2b_intro.zai",
+    "bytes": 552777,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/listening/versions/6o8OsTUdSQEovbjwDc9S/vid_listening_6a47b060-ec92-4b17-94ad-67692a9afb2b_intro.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_speaking_397b447f-ca3a-4c64-8d70-ff57e3b95b56_loop.alpha.zai",
+    "bytes": 4013816,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/speaking/versions/1bQjQmVoTU0ZwXSdWmKQ/vid_speaking_397b447f-ca3a-4c64-8d70-ff57e3b95b56_loop.alpha.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_speaking_397b447f-ca3a-4c64-8d70-ff57e3b95b56_loop.zai",
+    "bytes": 23820059,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/speaking/versions/1bQjQmVoTU0ZwXSdWmKQ/vid_speaking_397b447f-ca3a-4c64-8d70-ff57e3b95b56_loop.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_speaking_397b447f-ca3a-4c64-8d70-ff57e3b95b56_intro.alpha.zai",
+    "bytes": 573466,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/speaking/versions/1bQjQmVoTU0ZwXSdWmKQ/vid_speaking_397b447f-ca3a-4c64-8d70-ff57e3b95b56_intro.alpha.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_speaking_397b447f-ca3a-4c64-8d70-ff57e3b95b56_intro.zai",
+    "bytes": 3090166,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/speaking/versions/1bQjQmVoTU0ZwXSdWmKQ/vid_speaking_397b447f-ca3a-4c64-8d70-ff57e3b95b56_intro.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_poke_reaction_5a42e09a-e237-439f-a1be-c83ce0b36cd7.alpha.zai",
+    "bytes": 1340418,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/poke_reaction/versions/tIYF2KoU8nigpyk2svLD/vid_poke_reaction_5a42e09a-e237-439f-a1be-c83ce0b36cd7.alpha.zai"
+  },
+  {
+    "avatar": "iXNCpa1YsHTyfsuAMRNT",
+    "name": "Yumi",
+    "file": "vid_poke_reaction_5a42e09a-e237-439f-a1be-c83ce0b36cd7.zai",
+    "bytes": 6223449,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/iXNCpa1YsHTyfsuAMRNT/actions/poke_reaction/versions/tIYF2KoU8nigpyk2svLD/vid_poke_reaction_5a42e09a-e237-439f-a1be-c83ce0b36cd7.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_speaking_excited_ba754283-9d69-498d-a5b0-5120d3cf35bf_loop.alpha.zai",
+    "bytes": 2464842,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/speaking_excited/versions/km7uMfibGFCEHxREySuq/vid_speaking_excited_ba754283-9d69-498d-a5b0-5120d3cf35bf_loop.alpha.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_speaking_excited_ba754283-9d69-498d-a5b0-5120d3cf35bf_loop.zai",
+    "bytes": 18680600,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/speaking_excited/versions/km7uMfibGFCEHxREySuq/vid_speaking_excited_ba754283-9d69-498d-a5b0-5120d3cf35bf_loop.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_speaking_excited_ba754283-9d69-498d-a5b0-5120d3cf35bf_intro.alpha.zai",
+    "bytes": 210427,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/speaking_excited/versions/km7uMfibGFCEHxREySuq/vid_speaking_excited_ba754283-9d69-498d-a5b0-5120d3cf35bf_intro.alpha.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_speaking_excited_ba754283-9d69-498d-a5b0-5120d3cf35bf_intro.zai",
+    "bytes": 1494386,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/speaking_excited/versions/km7uMfibGFCEHxREySuq/vid_speaking_excited_ba754283-9d69-498d-a5b0-5120d3cf35bf_intro.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_wave_hand_0e5c567c-82ff-4aaa-9862-c832f43902f7.alpha.zai",
+    "bytes": 779211,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/wave_hand/versions/UXp4RRHbTGSYZ7rC2ow1/vid_wave_hand_0e5c567c-82ff-4aaa-9862-c832f43902f7.alpha.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_wave_hand_0e5c567c-82ff-4aaa-9862-c832f43902f7.zai",
+    "bytes": 3486778,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/wave_hand/versions/UXp4RRHbTGSYZ7rC2ow1/vid_wave_hand_0e5c567c-82ff-4aaa-9862-c832f43902f7.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_listening_0f2af970-eed7-4342-a31c-db0b14576956_loop.alpha.zai",
+    "bytes": 2490821,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/listening/versions/KQLs3vciqZAAM7iNLjAB/vid_listening_0f2af970-eed7-4342-a31c-db0b14576956_loop.alpha.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_listening_0f2af970-eed7-4342-a31c-db0b14576956_loop.zai",
+    "bytes": 22080027,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/listening/versions/KQLs3vciqZAAM7iNLjAB/vid_listening_0f2af970-eed7-4342-a31c-db0b14576956_loop.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_listening_0f2af970-eed7-4342-a31c-db0b14576956_intro.alpha.zai",
+    "bytes": 8223,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/listening/versions/KQLs3vciqZAAM7iNLjAB/vid_listening_0f2af970-eed7-4342-a31c-db0b14576956_intro.alpha.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_listening_0f2af970-eed7-4342-a31c-db0b14576956_intro.zai",
+    "bytes": 77577,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/listening/versions/KQLs3vciqZAAM7iNLjAB/vid_listening_0f2af970-eed7-4342-a31c-db0b14576956_intro.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_speaking_e101ae79-cc5b-46c0-bf71-0a9aed55b09a_loop.alpha.zai",
+    "bytes": 2059372,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/speaking/versions/iuXOV1Y9pjFOeu39pLW8/vid_speaking_e101ae79-cc5b-46c0-bf71-0a9aed55b09a_loop.alpha.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_speaking_e101ae79-cc5b-46c0-bf71-0a9aed55b09a_loop.zai",
+    "bytes": 17032073,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/speaking/versions/iuXOV1Y9pjFOeu39pLW8/vid_speaking_e101ae79-cc5b-46c0-bf71-0a9aed55b09a_loop.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_speaking_e101ae79-cc5b-46c0-bf71-0a9aed55b09a_intro.alpha.zai",
+    "bytes": 254473,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/speaking/versions/iuXOV1Y9pjFOeu39pLW8/vid_speaking_e101ae79-cc5b-46c0-bf71-0a9aed55b09a_intro.alpha.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_speaking_e101ae79-cc5b-46c0-bf71-0a9aed55b09a_intro.zai",
+    "bytes": 2042294,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/speaking/versions/iuXOV1Y9pjFOeu39pLW8/vid_speaking_e101ae79-cc5b-46c0-bf71-0a9aed55b09a_intro.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_poke_reaction_f4ee6f43-e0e6-4151-abcd-13802f6f2600.alpha.zai",
+    "bytes": 765681,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/poke_reaction/versions/hZs5YNkNTzVz17n6MzNQ/vid_poke_reaction_f4ee6f43-e0e6-4151-abcd-13802f6f2600.alpha.zai"
+  },
+  {
+    "avatar": "jyQ77ViXaoWefiniPARf",
+    "name": "Pico",
+    "file": "vid_poke_reaction_f4ee6f43-e0e6-4151-abcd-13802f6f2600.zai",
+    "bytes": 3112933,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/jyQ77ViXaoWefiniPARf/actions/poke_reaction/versions/hZs5YNkNTzVz17n6MzNQ/vid_poke_reaction_f4ee6f43-e0e6-4151-abcd-13802f6f2600.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_think_acffb052-a7b0-41ad-86b1-0b770d962063.alpha.zai",
+    "bytes": 1170120,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/think/versions/lwDUmjvIwoPMKpkJtx2q/vid_think_acffb052-a7b0-41ad-86b1-0b770d962063.alpha.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_think_acffb052-a7b0-41ad-86b1-0b770d962063.zai",
+    "bytes": 5889654,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/think/versions/lwDUmjvIwoPMKpkJtx2q/vid_think_acffb052-a7b0-41ad-86b1-0b770d962063.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_wave_hand_df01dba4-84b5-43d6-bc84-d063ab307270.alpha.zai",
+    "bytes": 1272531,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/wave_hand/versions/jepecHQv2ipzp5egCRHO/vid_wave_hand_df01dba4-84b5-43d6-bc84-d063ab307270.alpha.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_wave_hand_df01dba4-84b5-43d6-bc84-d063ab307270.zai",
+    "bytes": 6022704,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/wave_hand/versions/jepecHQv2ipzp5egCRHO/vid_wave_hand_df01dba4-84b5-43d6-bc84-d063ab307270.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_loop.alpha.zai",
+    "bytes": 4266598,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/listening/versions/yvMYPORYJx7TJDR22xNK/vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_loop.alpha.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_loop.zai",
+    "bytes": 30877693,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/listening/versions/yvMYPORYJx7TJDR22xNK/vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_loop.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_intro.alpha.zai",
+    "bytes": 31432,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/listening/versions/yvMYPORYJx7TJDR22xNK/vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_intro.alpha.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_intro.zai",
+    "bytes": 198502,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/listening/versions/yvMYPORYJx7TJDR22xNK/vid_listening_d02511b1-af37-4d1b-af65-f8fd7c1b5ed4_intro.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_speaking_993733c0-235b-4577-9df6-e2317867b941_loop.alpha.zai",
+    "bytes": 3917282,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/speaking/versions/VJpX46XoZvyJsmn0LfBv/vid_speaking_993733c0-235b-4577-9df6-e2317867b941_loop.alpha.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_speaking_993733c0-235b-4577-9df6-e2317867b941_loop.zai",
+    "bytes": 27393011,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/speaking/versions/VJpX46XoZvyJsmn0LfBv/vid_speaking_993733c0-235b-4577-9df6-e2317867b941_loop.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_speaking_993733c0-235b-4577-9df6-e2317867b941_intro.alpha.zai",
+    "bytes": 505884,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/speaking/versions/VJpX46XoZvyJsmn0LfBv/vid_speaking_993733c0-235b-4577-9df6-e2317867b941_intro.alpha.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_speaking_993733c0-235b-4577-9df6-e2317867b941_intro.zai",
+    "bytes": 3280643,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/speaking/versions/VJpX46XoZvyJsmn0LfBv/vid_speaking_993733c0-235b-4577-9df6-e2317867b941_intro.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_poke_reaction_1fe8cd6e-7fe2-47a2-acb9-d0c1fc4798cd.alpha.zai",
+    "bytes": 1212166,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/poke_reaction/versions/QWGqquRBcMGixKPAlmoL/vid_poke_reaction_1fe8cd6e-7fe2-47a2-acb9-d0c1fc4798cd.alpha.zai"
+  },
+  {
+    "avatar": "NKPwus9TulfkZWjL2cAF",
+    "name": "Ren",
+    "file": "vid_poke_reaction_1fe8cd6e-7fe2-47a2-acb9-d0c1fc4798cd.zai",
+    "bytes": 5809080,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/NKPwus9TulfkZWjL2cAF/actions/poke_reaction/versions/QWGqquRBcMGixKPAlmoL/vid_poke_reaction_1fe8cd6e-7fe2-47a2-acb9-d0c1fc4798cd.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_think_701318a9-698f-451a-bed7-a74546dadf97.alpha.zai",
+    "bytes": 1446596,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/think/versions/DN45tGIZCek9XU7a1A2L/vid_think_701318a9-698f-451a-bed7-a74546dadf97.alpha.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_think_701318a9-698f-451a-bed7-a74546dadf97.zai",
+    "bytes": 7017441,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/think/versions/DN45tGIZCek9XU7a1A2L/vid_think_701318a9-698f-451a-bed7-a74546dadf97.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_speaking_excited_076b2b64-9bc1-4e65-aa59-890d6c59ab08_loop.alpha.zai",
+    "bytes": 4555864,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/speaking_excited/versions/cFzwVsapyNMehiDqWv26/vid_speaking_excited_076b2b64-9bc1-4e65-aa59-890d6c59ab08_loop.alpha.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_speaking_excited_076b2b64-9bc1-4e65-aa59-890d6c59ab08_loop.zai",
+    "bytes": 28386429,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/speaking_excited/versions/cFzwVsapyNMehiDqWv26/vid_speaking_excited_076b2b64-9bc1-4e65-aa59-890d6c59ab08_loop.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_speaking_excited_076b2b64-9bc1-4e65-aa59-890d6c59ab08_intro.alpha.zai",
+    "bytes": 617280,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/speaking_excited/versions/cFzwVsapyNMehiDqWv26/vid_speaking_excited_076b2b64-9bc1-4e65-aa59-890d6c59ab08_intro.alpha.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_speaking_excited_076b2b64-9bc1-4e65-aa59-890d6c59ab08_intro.zai",
+    "bytes": 3632098,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/speaking_excited/versions/cFzwVsapyNMehiDqWv26/vid_speaking_excited_076b2b64-9bc1-4e65-aa59-890d6c59ab08_intro.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_wave_hand_66912fcd-e6a9-43a1-af74-6000e5e3b7b7.alpha.zai",
+    "bytes": 1461833,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/wave_hand/versions/4lO5aC4rbPSI06xX292F/vid_wave_hand_66912fcd-e6a9-43a1-af74-6000e5e3b7b7.alpha.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_wave_hand_66912fcd-e6a9-43a1-af74-6000e5e3b7b7.zai",
+    "bytes": 7211247,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/wave_hand/versions/4lO5aC4rbPSI06xX292F/vid_wave_hand_66912fcd-e6a9-43a1-af74-6000e5e3b7b7.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_listening_787cf39b-5330-4051-bd2b-54d423a25956_loop.alpha.zai",
+    "bytes": 4454099,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/listening/versions/Wkrm0dftm5n2vm7CLmCS/vid_listening_787cf39b-5330-4051-bd2b-54d423a25956_loop.alpha.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_listening_787cf39b-5330-4051-bd2b-54d423a25956_loop.zai",
+    "bytes": 28421700,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/listening/versions/Wkrm0dftm5n2vm7CLmCS/vid_listening_787cf39b-5330-4051-bd2b-54d423a25956_loop.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_listening_787cf39b-5330-4051-bd2b-54d423a25956_intro.alpha.zai",
+    "bytes": 132438,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/listening/versions/Wkrm0dftm5n2vm7CLmCS/vid_listening_787cf39b-5330-4051-bd2b-54d423a25956_intro.alpha.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_listening_787cf39b-5330-4051-bd2b-54d423a25956_intro.zai",
+    "bytes": 766263,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/listening/versions/Wkrm0dftm5n2vm7CLmCS/vid_listening_787cf39b-5330-4051-bd2b-54d423a25956_intro.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_speaking_85d555ed-701c-4c51-8529-7b981a4b130d_loop.alpha.zai",
+    "bytes": 4466926,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/speaking/versions/NSGi4HdAzDJbfiUzxl65/vid_speaking_85d555ed-701c-4c51-8529-7b981a4b130d_loop.alpha.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_speaking_85d555ed-701c-4c51-8529-7b981a4b130d_loop.zai",
+    "bytes": 28035057,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/speaking/versions/NSGi4HdAzDJbfiUzxl65/vid_speaking_85d555ed-701c-4c51-8529-7b981a4b130d_loop.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_speaking_85d555ed-701c-4c51-8529-7b981a4b130d_intro.alpha.zai",
+    "bytes": 642617,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/speaking/versions/NSGi4HdAzDJbfiUzxl65/vid_speaking_85d555ed-701c-4c51-8529-7b981a4b130d_intro.alpha.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_speaking_85d555ed-701c-4c51-8529-7b981a4b130d_intro.zai",
+    "bytes": 3856736,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/speaking/versions/NSGi4HdAzDJbfiUzxl65/vid_speaking_85d555ed-701c-4c51-8529-7b981a4b130d_intro.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_poke_reaction_acd986c4-cd2e-4886-90a7-cebc3dea1251.alpha.zai",
+    "bytes": 1406912,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/poke_reaction/versions/lb8tmh2s22qc6gArpYij/vid_poke_reaction_acd986c4-cd2e-4886-90a7-cebc3dea1251.alpha.zai"
+  },
+  {
+    "avatar": "YMwiCnO91hgpyi1mMMHv",
+    "name": "Zera",
+    "file": "vid_poke_reaction_acd986c4-cd2e-4886-90a7-cebc3dea1251.zai",
+    "bytes": 6939958,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/YMwiCnO91hgpyi1mMMHv/actions/poke_reaction/versions/lb8tmh2s22qc6gArpYij/vid_poke_reaction_acd986c4-cd2e-4886-90a7-cebc3dea1251.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_thumbs_up_b57376f9-55fe-47aa-95a4-20bdc7c75423.zai",
+    "bytes": 11062311,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/thumbs_up/versions/DBi1iYemv0H8C657rKBy/vid_thumbs_up_b57376f9-55fe-47aa-95a4-20bdc7c75423.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_speaking_excited_51ac897b-f031-41a9-884f-a124a916509f_loop.zai",
+    "bytes": 22878894,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/speaking_excited/versions/qvhQzzbIdbQAVj4MZ2EE/vid_speaking_excited_51ac897b-f031-41a9-884f-a124a916509f_loop.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_speaking_excited_51ac897b-f031-41a9-884f-a124a916509f_intro.zai",
+    "bytes": 2938260,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/speaking_excited/versions/qvhQzzbIdbQAVj4MZ2EE/vid_speaking_excited_51ac897b-f031-41a9-884f-a124a916509f_intro.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_think_41e89296-003d-4706-af3f-f98553faa4f9.zai",
+    "bytes": 11010071,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/think/versions/2f3CEfb1Rb0oCJCzLyXw/vid_think_41e89296-003d-4706-af3f-f98553faa4f9.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_embarrassed_c9597d09-4c14-4c12-b253-c8b4430caa84.zai",
+    "bytes": 11196515,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/embarrassed/versions/zkFBoiJ8gWn67aYYHfko/vid_embarrassed_c9597d09-4c14-4c12-b253-c8b4430caa84.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_clap_1fae6df8-fbfb-4ad9-a5cf-a1161d10e035.zai",
+    "bytes": 10990319,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/clap/versions/TYWW1x87Z0ny4KAjDtPM/vid_clap_1fae6df8-fbfb-4ad9-a5cf-a1161d10e035.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_wave_hand_63d1a67e-9f98-4b57-9064-9410df4c8bc7.zai",
+    "bytes": 10775258,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/wave_hand/versions/D0cO9aBuzgSrdyjOHY2H/vid_wave_hand_63d1a67e-9f98-4b57-9064-9410df4c8bc7.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_listening_0d543c05-3d29-4c90-92a2-a2cbeba0d6eb_loop.zai",
+    "bytes": 24633963,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/listening/versions/vOXVMqmDGM5WEdMatPl9/vid_listening_0d543c05-3d29-4c90-92a2-a2cbeba0d6eb_loop.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_listening_0d543c05-3d29-4c90-92a2-a2cbeba0d6eb_intro.zai",
+    "bytes": 117429,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/listening/versions/vOXVMqmDGM5WEdMatPl9/vid_listening_0d543c05-3d29-4c90-92a2-a2cbeba0d6eb_intro.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_speaking_a1250b41-6bb0-4e57-b843-d25d666ed067_loop.zai",
+    "bytes": 23524316,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/speaking/versions/u5tnLeYFdNXJrqkiGfD5/vid_speaking_a1250b41-6bb0-4e57-b843-d25d666ed067_loop.zai"
+  },
+  {
+    "avatar": "DjAMYqYUnSf9p8kgJlTY",
+    "name": "Zera",
+    "file": "vid_speaking_a1250b41-6bb0-4e57-b843-d25d666ed067_intro.zai",
+    "bytes": 1586922,
+    "src": "https://cdn.zeroweight.ai/user/MWTgqv64YyV2MF6QdEhh2mcbMra2/avatars/DjAMYqYUnSf9p8kgJlTY/actions/speaking/versions/u5tnLeYFdNXJrqkiGfD5/vid_speaking_a1250b41-6bb0-4e57-b843-d25d666ed067_intro.zai"
+  }
+]
