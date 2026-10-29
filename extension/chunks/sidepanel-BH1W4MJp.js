@@ -23544,7 +23544,7 @@ function messageOf(error) {
 }
 //#endregion
 //#region src/character/voice/playback.ts
-var CHUNK_TIMEOUT_MS = 2e4;
+var CHUNK_TIMEOUT_MS = 18e4;
 /** Slack past a buffer's duration before the watchdog ends it */
 var WATCHDOG_SLACK_MS = 3e3;
 /** How long to wait for a suspended AudioContext to resume */
@@ -23711,21 +23711,36 @@ var Playback = class {
 		const frames = await new Promise((resolve) => {
 			const collected = [];
 			let settled = false;
+			let timer = null;
 			const finish = (result) => {
 				if (settled) return;
 				settled = true;
+				if (timer) clearTimeout(timer);
 				ws.onmessage = null;
 				resolve(result);
+			};
+			const bump = () => {
+				if (settled) return;
+				if (timer) clearTimeout(timer);
+				timer = setTimeout(() => {
+					console.warn("[character/tts] synthesis timed out");
+					finish(collected.length ? collected : null);
+				}, CHUNK_TIMEOUT_MS);
 			};
 			ws.onmessage = (event) => {
 				if (typeof event.data !== "string") {
 					collected.push(event.data);
+					bump();
 					return;
 				}
 				let payload;
 				try {
 					payload = JSON.parse(event.data);
 				} catch {
+					return;
+				}
+				if (payload.type === "progress") {
+					bump();
 					return;
 				}
 				if (payload.type === "done") finish(collected.length ? collected : null);
@@ -23742,7 +23757,7 @@ var Playback = class {
 			} catch {
 				finish(null);
 			}
-			setTimeout(() => finish(null), CHUNK_TIMEOUT_MS);
+			bump();
 		});
 		if (!frames) return null;
 		const bytes = concat(frames);

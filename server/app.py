@@ -1411,9 +1411,25 @@ async def speech_socket(ws: WebSocket, kind: str):
             spoken = (req.get("text") or "").strip()
             voice_id = req.get("voice_id")
             provider = local_speech.provider_for(voice_id, PERSONAS)
-            audio, _fmt = await local_speech.synthesise(
-                spoken, voice_id=voice_id, provider=provider
+            log.info("tts ws chars=%s voice=%s", len(spoken), voice_id)
+            synth = asyncio.create_task(
+                local_speech.synthesise(spoken, voice_id=voice_id, provider=provider)
             )
+            while not synth.done():
+                done, _pending = await asyncio.wait({synth}, timeout=4.0)
+                if not done:
+                    try:
+                        await ws.send_text(json.dumps({"type": "progress"}))
+                    except Exception:
+                        synth.cancel()
+                        return
+            try:
+                audio, _fmt = synth.result()
+            except Exception as e:
+                log.warning("tts ws synth failed: %s", e)
+                await ws.send_text(json.dumps({"type": "error", "message": str(e)}))
+                continue
+            log.info("tts ws audio_bytes=%s", len(audio) if audio else 0)
             step = 32_768
             for i in range(0, len(audio), step):
                 await ws.send_bytes(audio[i : i + step])
