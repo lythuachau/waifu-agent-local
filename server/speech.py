@@ -182,7 +182,7 @@ def zerotts_providers() -> list:
 
     Set ZEROTTS_DEVICE=dml|cuda|cpu to override. CUDA needs ORT GPU + CUDA 13.
     """
-    want = (os.environ.get("ZEROTTS_DEVICE") or "cpu").strip().lower()
+    want = (os.environ.get("ZEROTTS_DEVICE") or "cuda").strip().lower()
     try:
         import onnxruntime as ort
         avail = set(ort.get_available_providers())
