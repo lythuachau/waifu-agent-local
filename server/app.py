@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 import speech as local_speech
 import codex_llm
 import jev_brain
+import vision_ocr
 
 log = logging.getLogger("zw.local")
 
@@ -55,7 +56,7 @@ DEFAULT_SETTINGS = {
     "llm_backend": "codex",
     "ollama_model": "llama3.2",
     "codex_model": "gpt-6-luna",
-    "vision_model": "auto",
+    "vision_model": "ocr",
     "default_engine": "auto",
     "default_edge": "ja-JP-NanamiNeural",
     "voice_map": {},
@@ -213,7 +214,7 @@ def load_settings() -> dict:
         rec["llm_backend"] = "codex" if codex_llm.logged_in() else "ollama"
     rec["codex_model"] = rec.get("codex_model") or "gpt-6-luna"
     rec["ollama_model"] = rec.get("ollama_model") or LLM_MODEL
-    rec["vision_model"] = rec.get("vision_model") or "auto"
+    rec["vision_model"] = rec.get("vision_model") or "ocr"
     rec["default_engine"] = rec.get("default_engine") or "auto"
     rec["default_edge"] = rec.get("default_edge") or "ja-JP-NanamiNeural"
     rec["voice_map"] = rec.get("voice_map") if isinstance(rec.get("voice_map"), dict) else {}
@@ -1050,8 +1051,8 @@ def _vision_fallback_text(messages: list) -> str:
         elif isinstance(c, str) and not tab:
             tab = c
     text = (
-        "No local vision model is installed. Run `ollama pull llava` then pick it at /settings. "
-        "Until then use the numeric [index] list from the page."
+        "No screenshot reader is ready. RapidOCR models missing under server/data/rapidocr_models. "
+        "Optional heavy captioner: set Vision to llava after `ollama pull llava`."
     )
     if tab:
         text = f"{text} Tab: {tab[:800]}"
@@ -1091,31 +1092,67 @@ def ollama_native_messages(messages: list) -> list[dict]:
     return out
 
 
+def vision_choice() -> str:
+    return (load_settings().get("vision_model") or "ocr").strip() or "ocr"
+
+
+def use_ocr_vision() -> bool:
+    chosen = vision_choice().lower()
+    return chosen in ("auto", "ocr", "rapidocr")
+
+
 async def resolve_vision_model() -> str | None:
     rec = load_settings()
-    chosen = (rec.get("vision_model") or "auto").strip()
+    chosen = vision_choice()
+    if chosen.lower() in ("auto", "ocr", "rapidocr"):
+        return "ocr" if vision_ocr.available() else None
     rows = await list_ollama_models()
     vis = [r["id"] for r in rows if r.get("vision")]
-    if chosen and chosen not in ("auto",):
-        for r in rows:
-            if r["id"] == chosen or r["id"].startswith(chosen + ":"):
-                return r["id"]
-        return chosen
-    prefer = ("llava", "qwen2.5-vl", "qwen2.5vl", "llama3.2-vision", "moondream", "minicpm")
-    for hint in prefer:
-        for vid in vis:
-            if hint in vid.lower():
-                return vid
-    return vis[0] if vis else None
+    for r in rows:
+        if r["id"] == chosen or r["id"].startswith(chosen + ":"):
+            return r["id"]
+    return chosen or (vis[0] if vis else None)
+
+
+def _images_from_messages(messages: list) -> list[str]:
+    urls = []
+    for rec in ollama_native_messages(messages):
+        urls.extend(rec.get("images") or [])
+    return urls
 
 
 @app.post("/api/v1/vision/chat/completions")
 async def vision_chat(body: dict):
-    """Screenshot describe. Always Ollama vision — Codex/llama3.2 cannot see images."""
+    """Screenshot reader. Default: RapidOCR (dsh-pet style). Optional Ollama VLM."""
     messages = body.get("messages") or []
+    if use_ocr_vision() and vision_ocr.available():
+        blobs = _images_from_messages(messages)
+        if not blobs:
+            text = _vision_fallback_text(messages)
+        else:
+            parts = []
+            for item in blobs[:3]:
+                try:
+                    parts.append(await asyncio.to_thread(vision_ocr.describe_data_url, item))
+                except Exception as e:
+                    log.warning("RapidOCR failed: %s", e)
+                    parts.append(f"OCR error: {e}")
+            text = "\n\n".join(parts) if parts else _vision_fallback_text(messages)
+        log.info("vision via rapidocr chars=%s", len(text))
+        return JSONResponse({
+            "id": "chatcmpl-local-vision",
+            "object": "chat.completion",
+            "choices": [{
+                "index": 0,
+                "finish_reason": "stop",
+                "message": {"role": "assistant", "content": text},
+            }],
+            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+            "model": "rapidocr",
+        })
     model = await resolve_vision_model()
-    if not model:
-        log.warning("vision: no Ollama vision model")
+    if not model or model == "ocr":
+        log.warning("vision: no reader configured")
         return JSONResponse({
             "id": "chatcmpl-local-vision",
             "object": "chat.completion",
@@ -1460,7 +1497,8 @@ async def local_catalog():
     return {
         "settings": rec,
         "ollama_models": ollama,
-        "vision_models": [m for m in ollama if m.get("vision")],
+        "vision_models": [{"id": "ocr", "label": "RapidOCR (nhẹ, đọc chữ trên ảnh)"}]
+        + [m for m in ollama if m.get("vision")],
         "vision_resolved": await resolve_vision_model(),
         "codex_models": codex_llm.list_model_ids(),
         "codex": codex_llm.status(),
@@ -1532,7 +1570,7 @@ def healthz():
         "codex": rec.get("codex_model") if rec.get("llm_backend") == "codex" else None,
         "codex_logged_in": codex_llm.logged_in(),
         "jev": "codex>ollama>regex" if rec.get("llm_backend") != "ollama" else "ollama>regex",
-        "vision_model": rec.get("vision_model") or "auto",
+        "vision_model": rec.get("vision_model") or "ocr",
         "tts_gateway": rec.get("tts_gateway") or "local",
         "original_voices": bool(zw_developer_key()),
         "zerotts": local_speech.zerotts_status(),

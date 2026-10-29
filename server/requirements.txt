@@ -9,3 +9,5 @@ zerotts @ git+https://github.com/lythuachau/ZeroTTS.git@main
 pyttsx3>=2.90
 faster-whisper>=1.0.0
 numpy>=1.26.0
+rapidocr>=3.10,<4
+opencv-python-headless>=4.8

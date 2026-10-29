@@ -192,13 +192,16 @@ async function load() {
   $("llm_backend").value = s.llm_backend || "ollama";
   fillSelect($("ollama_model"), catalog.ollama_models || [], s.ollama_model || "llama3.2");
   fillSelect($("codex_model"), (catalog.codex_models || []).map((id) => ({id, label: id})), s.codex_model);
-  const vis = [{id: "auto", label: "Tự chọn model vision"}].concat(
-    (catalog.vision_models || []).map((m) => ({id: m.id, label: m.id}))
-  );
-  fillSelect($("vision_model"), vis, s.vision_model || "auto");
-  $("vision-hint").innerHTML = catalog.vision_resolved
-    ? `<span class="ok">Vision: ${catalog.vision_resolved}. Avatar mô tả screenshot khi trang có ảnh hoặc ít chữ.</span>`
-    : '<span class="bad">Chưa có model vision. Chạy <code>ollama pull llava</code> (~4.5 GB). llama3.2 không nhìn được ảnh.</span>';
+  const vis = (catalog.vision_models || []).map((m) => ({
+    id: m.id,
+    label: m.label || m.id,
+  }));
+  fillSelect($("vision_model"), vis, s.vision_model || "ocr");
+  $("vision-hint").innerHTML = (catalog.vision_resolved === "ocr")
+    ? '<span class="ok">Vision mặc định RapidOCR (~30 MB): đọc chữ trên screenshot, không nạp llava. Muốn mô tả ảnh/cảnh thì chọn llava (tốn ~4–5 GB RAM).</span>'
+    : (catalog.vision_resolved
+      ? `<span class="ok">Vision VLM: ${catalog.vision_resolved} (nặng RAM).</span>`
+      : '<span class="bad">Chưa có RapidOCR models trong server/data/rapidocr_models.</span>');
   fillSelect($("default_edge"), catalog.edge_voices || [], s.default_edge);
   $("default_engine").value = s.default_engine || "auto";
   $("tts_gateway").value = s.tts_gateway || "local";
