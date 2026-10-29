@@ -2,8 +2,110 @@
   "llm_backend": "codex",
   "ollama_model": "llama3.2",
   "codex_model": "gpt-6-luna",
+  "vision_model": "ocr",
   "default_engine": "auto",
   "default_edge": "ja-JP-NanamiNeural",
-  "voice_map": {},
+  "voice_map": {
+    "ba301706-ea97-4328-a27f-71699ec2482d": {
+      "edge": "en-US-AvaNeural",
+      "engine": "auto"
+    },
+    "a8edab71-5925-4379-8007-636764211659": {
+      "edge": "ja-JP-ShioriNeural",
+      "engine": "auto"
+    },
+    "zw_minimax_voice_hS2Tm38wM5sC6qjOxL38": {
+      "edge": "en-US-AvaNeural",
+      "engine": "auto"
+    },
+    "28d0e1eb-e92e-4360-acc5-cda4776f720a": {
+      "edge": "ja-JP-NanamiNeural",
+      "engine": "auto"
+    },
+    "6985e0ec-a82f-43bd-91e9-5a1c96f71fbe": {
+      "edge": "ja-JP-MayuNeural",
+      "engine": "auto"
+    },
+    "339a92d4-b9b9-465d-9495-f11c94788a8b": {
+      "edge": "ja-JP-AoiNeural",
+      "engine": "auto"
+    },
+    "7e969538-f86f-415a-ab78-c80a92ea9dd3": {
+      "edge": "en-US-JennyNeural",
+      "engine": "auto"
+    },
+    "c32b5154-8f89-4117-8b69-9b2e2973ca31": {
+      "edge": "zh-CN-XiaoyiNeural",
+      "engine": "auto"
+    },
+    "894ce547-50a1-466a-b17f-6b9e2f3dadde": {
+      "edge": "zh-CN-XiaoxiaoNeural",
+      "engine": "auto"
+    },
+    "e43510d7-f295-4984-a1bd-0e5c167e136d": {
+      "edge": "ja-JP-MayuNeural",
+      "engine": "auto"
+    },
+    "zw_minimax_voice_KdnWLmgBuIQ1O0vLRRVg": {
+      "edge": "ja-JP-AoiNeural",
+      "engine": "auto"
+    },
+    "b99c8205-92d3-4d6d-b980-86eac9a403f2": {
+      "edge": "ja-JP-NanamiNeural",
+      "engine": "auto"
+    },
+    "6c08a848-6ee7-4fdf-a0bc-2bccb43c47a4": {
+      "edge": "ja-JP-NanamiNeural",
+      "engine": "auto"
+    },
+    "zw_minimax_voice_N2El4XA73CpnMZEreDGc": {
+      "edge": "ja-JP-ShioriNeural",
+      "engine": "auto"
+    },
+    "e22e8b34-eaa5-4a33-956b-0e33c3f0ca40": {
+      "edge": "en-US-AnaNeural",
+      "engine": "auto"
+    },
+    "32051674-aef5-4bb3-8488-e88f194dd359": {
+      "edge": "ja-JP-NanamiNeural",
+      "engine": "auto"
+    },
+    "eb066dcd-f736-4c0f-8196-b6eb4949a9b4": {
+      "edge": "ja-JP-AoiNeural",
+      "engine": "auto"
+    },
+    "14350ce9-23fa-4681-bdd4-b28c12972d73": {
+      "edge": "ja-JP-MayuNeural",
+      "engine": "auto"
+    },
+    "a7940bdb-d8de-4273-a6f9-b5a9543ce062": {
+      "edge": "en-US-AndrewNeural",
+      "engine": "auto"
+    },
+    "fb8e062b-30dd-4792-9b89-e93d802b3b6f": {
+      "edge": "ja-JP-AoiNeural",
+      "engine": "auto"
+    },
+    "e67265a6-31d6-4a3e-ac4b-fe664e8b0eda": {
+      "edge": "en-GB-SoniaNeural",
+      "engine": "auto"
+    },
+    "ShiinaMahiru_61114a76a76f": {
+      "edge": "vi-VN-HoaiMyNeural",
+      "engine": "auto"
+    },
+    "zw_minimax_voice_M8WDG3dSF76jLPrQyjM8": {
+      "edge": "ja-JP-NanamiNeural",
+      "engine": "auto"
+    },
+    "41b7650d-c88d-4d97-b2ab-1d989b13fd8d": {
+      "edge": "ja-JP-ShioriNeural",
+      "engine": "auto"
+    },
+    "e9cd42a1-3651-4dd1-ba36-612479f56fa8": {
+      "edge": "ja-JP-AoiNeural",
+      "engine": "auto"
+    }
+  },
   "tts_gateway": "local"
 }
