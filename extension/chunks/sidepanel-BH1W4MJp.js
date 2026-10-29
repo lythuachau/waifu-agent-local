@@ -20921,6 +20921,25 @@ function validateAction(action, tools) {
 			value = { [requiredKey]: value };
 		}
 	}
+	if (toolName === "scroll" && value && typeof value === "object") {
+		const down = value.down;
+		if (typeof down !== "boolean") {
+			const n = typeof down === "number" ? down : Number(down);
+			if (Number.isFinite(n) && Math.abs(n) > 1 && value.pixels == null) value = {
+				...value,
+				pixels: Math.abs(Math.trunc(n)),
+				down: n >= 0
+			};
+			else value = {
+				...value,
+				down: !(down === 0 || down === "0" || down === "false" || down === "up" || down === false)
+			};
+		}
+	}
+	if (toolName === "done" && value && typeof value === "object" && "success" in value && typeof value.success !== "boolean") value = {
+		...value,
+		success: Boolean(value.success)
+	};
 	const result = schema.safeParse(value);
 	if (!result.success) throw new InvokeError(InvokeErrorTypes.INVALID_TOOL_ARGS, `Invalid input for action "${toolName}": ${prettifyError(result.error)}`);
 	return { [toolName]: result.data };

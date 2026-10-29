@@ -600,7 +600,7 @@ AGENT_OUTPUT_NUDGE = (
     '{"evaluation_previous_goal":"short","memory":"short","next_goal":"short",'
     '"action":{"click_element_by_index":{"index":0}}}\n'
     "action is exactly one key: click_element_by_index {index}, "
-    "input_text {index,text}, press_key {key}, scroll {down}, wait {seconds}, "
+    "input_text {index,text}, press_key {key}, scroll {down:true}, wait {seconds}, "
     "done {text,success}, act {goal}. Use a numeric [index] from Interactive Elements."
 )
 
@@ -615,6 +615,21 @@ def _as_int(value) -> int | None:
     if isinstance(value, str) and value.strip().isdigit():
         return int(value.strip())
     return None
+
+
+def _as_bool(value, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    s = str(value).strip().lower()
+    if s in ("0", "false", "no", "up", "n", ""):
+        return False
+    if s in ("1", "true", "yes", "down", "y"):
+        return True
+    return default
 
 
 def _index_from(obj: dict, content: str, last_user: str) -> int | None:
@@ -640,12 +655,28 @@ def _index_from(obj: dict, content: str, last_user: str) -> int | None:
     return None
 
 
+def _sanitize_scroll(payload: dict) -> dict:
+    out = dict(payload)
+    down = out.get("down")
+    if isinstance(down, (int, float)) and not isinstance(down, bool) and abs(down) > 1:
+        if out.get("pixels") is None:
+            out["pixels"] = int(abs(down))
+        out["down"] = down > 0
+    else:
+        out["down"] = _as_bool(down, True)
+    return out
+
+
 def _tool_input(name: str, raw, obj: dict, content: str, last_user: str) -> dict:
     if isinstance(raw, dict) and raw:
         if name == "click_element_by_index" and _as_int(raw.get("index")) is None:
             n = _index_from({**obj, **raw}, content, last_user)
             if n is not None:
                 raw = {**raw, "index": n}
+        if name == "scroll":
+            return _sanitize_scroll(raw)
+        if name == "done" and "success" in raw:
+            return {**raw, "success": _as_bool(raw.get("success"), True)}
         return raw
     if name == "click_element_by_index":
         n = _index_from(obj, content, last_user)
@@ -667,9 +698,11 @@ def _tool_input(name: str, raw, obj: dict, content: str, last_user: str) -> dict
         return out
     if name == "scroll":
         down = obj.get("down")
+        if down is None and not isinstance(raw, dict):
+            down = raw
         if down is None:
             down = str(obj.get("action") or content).lower().find("up") < 0
-        return {"down": bool(down)}
+        return _sanitize_scroll({"down": down})
     if name == "wait":
         sec = _as_int(obj.get("seconds") or raw) or 1
         return {"seconds": sec}
@@ -774,12 +807,22 @@ def coerce_existing_tool_calls(body: dict, data: dict) -> dict:
         )
         fn["name"] = "reply"
         fn["arguments"] = json.dumps(args, ensure_ascii=False)
-        call["function"] = fn
-        calls[0] = call
-        msg["tool_calls"] = calls
-        choice["message"] = msg
-        choice["finish_reason"] = "tool_calls"
-        data["choices"] = [choice]
+    elif name == "AgentOutput":
+        args = coerce_agent_output(
+            str(raw_args),
+            parsed if isinstance(parsed, dict) else None,
+            last_user=last_user_text(body),
+        )
+        fn["name"] = "AgentOutput"
+        fn["arguments"] = json.dumps(args, ensure_ascii=False)
+    else:
+        return data
+    call["function"] = fn
+    calls[0] = call
+    msg["tool_calls"] = calls
+    choice["message"] = msg
+    choice["finish_reason"] = "tool_calls"
+    data["choices"] = [choice]
     return data
 
 
