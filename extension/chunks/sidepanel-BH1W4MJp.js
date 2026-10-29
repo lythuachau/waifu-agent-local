@@ -28372,11 +28372,13 @@ function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, pr
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
 			title: "Giọng",
-			info: "Câu tiếng Việt → ZeroTTS. Nghe thử dùng API local.",
+			info: "Câu tiếng Việt → VieNeu (clone 8 giọng ZeroTTS). ZeroTTS chỉ fallback.",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "text-[10px] text-muted-foreground leading-relaxed",
-					children: zt.loaded ? "ZeroTTS đã nạp." : zt.error ? `ZeroTTS lỗi: ${zt.error}` : "ZeroTTS đang nạp model…"
+					children: (speech.vieneu && speech.vieneu.loaded)
+						? "VieNeu đã nạp (TTS tiếng Việt chính)."
+						: (zt.loaded ? "ZeroTTS fallback đã nạp." : "VieNeu đang nạp…")
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
 					label: "Nguồn khi chat",
@@ -28389,7 +28391,7 @@ function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, pr
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
 								value: "local",
-								children: "Local (ZeroTTS / Edge)"
+								children: "Local (VieNeu / Edge)"
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
 								value: "zeroweight",
@@ -28409,11 +28411,15 @@ function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, pr
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
 								value: "auto",
-								children: "Tự động (VI → ZeroTTS)"
+								children: "Tự động (VI → VieNeu)"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								value: "vieneu",
+								children: "Luôn VieNeu"
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
 								value: "zerotts",
-								children: "Luôn ZeroTTS"
+								children: "ZeroTTS gốc (fallback)"
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
 								value: "gtts",

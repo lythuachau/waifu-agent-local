@@ -235,7 +235,7 @@ def save_settings(rec: dict) -> dict:
         current["ollama_model"] = str(rec["ollama_model"])
     if rec.get("vision_model"):
         current["vision_model"] = str(rec["vision_model"])
-    if rec.get("default_engine") in ("auto", "gtts", "edge", "zerotts"):
+    if rec.get("default_engine") in ("auto", "gtts", "edge", "zerotts", "vieneu"):
         current["default_engine"] = rec["default_engine"]
     if rec.get("default_edge"):
         current["default_edge"] = str(rec["default_edge"])

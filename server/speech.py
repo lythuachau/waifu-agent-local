@@ -70,7 +70,7 @@ EDGE_CATALOG = [
     *[
         {
             "id": f"zerotts-{name}",
-            "label": f"ZeroTTS {label} (vi · {tags})",
+            "label": f"VieNeu {label} (vi · clone ZeroTTS · {tags})",
             "engine": "zerotts",
             "lang": "vi",
             "speaker": name,
@@ -244,10 +244,14 @@ def get_zerotts():
 
 
 def start_warmup() -> None:
+    """ZeroTTS stays cold unless ZEROTTS_WARMUP=1. VieNeu is the VI primary."""
     global _warmup_started
     if _warmup_started:
         return
     _warmup_started = True
+    if (os.environ.get("ZEROTTS_WARMUP") or "").strip() not in ("1", "true", "yes"):
+        log.info("ZeroTTS warmup skipped (VieNeu is primary; set ZEROTTS_WARMUP=1 to preload)")
+        return
 
     def _run() -> None:
         global _zerotts_error
@@ -357,6 +361,8 @@ def will_use_zerotts(text: str, voice_id: str | None) -> tuple[bool, str]:
     table = load_voices()
     edge = info.get("edge") or table.get("default_edge") or TTS_VOICE
     engine = (info.get("engine") or table.get("default_engine") or "auto").lower()
+    if engine == "vieneu":
+        engine = "zerotts"
     if str(edge).startswith("zerotts"):
         engine = "zerotts"
     speaker = zerotts_speaker(edge)
@@ -509,6 +515,8 @@ async def synthesise(
     prov = (provider or info.get("provider") or "minimax").lower()
     edge = edge or info.get("edge") or table.get("default_edge") or TTS_VOICE
     engine = (engine or info.get("engine") or table.get("default_engine") or "auto").lower()
+    if engine == "vieneu":
+        engine = "zerotts"
     if str(edge).startswith("zerotts"):
         engine = "zerotts"
     elif str(edge).startswith("gtts"):
