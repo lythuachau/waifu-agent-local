@@ -23,10 +23,10 @@ Animated avatars run fully offline. `offline_pack.py` downloaded the 9 system `.
 - Chrome (load unpacked)
 - ZeroTTS Python package from `https://github.com/lythuachau/ZeroTTS` (pulled by `start.ps1` via `server/requirements.txt`; not PyPI)
 - An LLM backend:
-  - Ollama: `ollama serve` then `ollama pull llama3.2`
-  - Codex / ChatGPT: `codex login` on this PC, then pick Codex at `http://127.0.0.1:8787/settings` or Advanced → Provider **Codex (ChatGPT on this PC)**, key `local`
+  - Default brain: **Codex** (`codex login`) for Jev + agent; Ollama then regex if Codex fails
+  - Ollama fallback: `ollama serve` then `ollama pull llama3.2`. Smarter local: `ollama pull qwen2.5:7b` and pick it at `/settings`
+  - Offline: `/settings` → Backend **Ollama only**
   - LM Studio: local server on `http://127.0.0.1:1234/v1`
-  - OpenAI API key: `LLM_BASE_URL=https://api.openai.com/v1` and `LLM_API_KEY`
 
 ## 1. Build the local extension (once)
 

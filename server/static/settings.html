@@ -67,8 +67,8 @@
       <div>
         <label for="llm_backend">Backend</label>
         <select id="llm_backend">
-          <option value="ollama">Ollama (máy local)</option>
-          <option value="codex">Codex / ChatGPT trên máy này</option>
+          <option value="codex">Codex (Jev + agent, Ollama dự phòng)</option>
+          <option value="ollama">Ollama only (offline)</option>
         </select>
       </div>
       <div>
@@ -82,7 +82,7 @@
         <select id="codex_model"></select>
       </div>
     </div>
-    <p class="hint">Ollama: <code>ollama pull llama3.2</code>. Codex: chạy <code>codex login</code> nếu chưa đăng nhập ChatGPT.</p>
+    <p class="hint">Mặc định: Jev + agent đi Codex, lỗi thì Ollama, Jev lỗi tiếp thì regex. Verify <code>confirm</code> không gọi Codex. Não local thông minh hơn: <code>ollama pull qwen2.5:7b</code> rồi chọn model đó (máy đang có llama3.2 3.2B). Ảnh trên trang: <code>ollama pull llava</code>.</p>
   </section>
 
   <section class="card" id="voice">

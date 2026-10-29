@@ -1,5 +1,5 @@
 {
-  "llm_backend": "ollama",
+  "llm_backend": "codex",
   "ollama_model": "llama3.2",
   "codex_model": "gpt-6-luna",
   "default_engine": "auto",

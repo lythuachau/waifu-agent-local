@@ -23,6 +23,7 @@ from fastapi.staticfiles import StaticFiles
 
 import speech as local_speech
 import codex_llm
+import jev_brain
 
 log = logging.getLogger("zw.local")
 
@@ -39,7 +40,7 @@ VISION_MODEL = os.environ.get("VISION_MODEL", LLM_MODEL)
 TTS_VOICE = os.environ.get("TTS_VOICE", "ja-JP-NanamiNeural")
 SETTINGS_PATH = DATA / "settings.json"
 DEFAULT_SETTINGS = {
-    "llm_backend": "ollama",
+    "llm_backend": "codex",
     "ollama_model": "llama3.2",
     "codex_model": "gpt-6-luna",
     "default_engine": "auto",
@@ -196,7 +197,7 @@ def load_settings() -> dict:
         except Exception:
             pass
     if rec.get("llm_backend") not in ("ollama", "codex"):
-        rec["llm_backend"] = "ollama"
+        rec["llm_backend"] = "codex" if codex_llm.logged_in() else "ollama"
     rec["codex_model"] = rec.get("codex_model") or "gpt-6-luna"
     rec["ollama_model"] = rec.get("ollama_model") or LLM_MODEL
     rec["default_engine"] = rec.get("default_engine") or "auto"
@@ -940,20 +941,30 @@ async def ollama_chat(payload: dict) -> JSONResponse:
 
 
 async def backend_chat(payload: dict, force: str | None = None) -> JSONResponse:
-    backend = force or load_settings().get("llm_backend") or "ollama"
+    rec = load_settings()
+    backend = force or rec.get("llm_backend") or "codex"
+    if backend == "codex" and not codex_llm.logged_in():
+        backend = "ollama"
     if backend == "codex":
         try:
-            data = await codex_llm.chat_completions({
-                **payload,
-                "model": payload.get("model")
-                if payload.get("model") not in (None, "", "zeroweight", LLM_MODEL)
-                else load_settings().get("codex_model"),
-            })
-            return JSONResponse(data)
+            req_model = payload.get("model")
+            if req_model in (None, "", "zeroweight", rec.get("ollama_model"), LLM_MODEL):
+                req_model = rec.get("codex_model") or "gpt-6-luna"
+            data = await codex_llm.chat_completions({**payload, "model": req_model})
+            msg, content = message_content(data)
+            if msg.get("tool_calls") or content:
+                return JSONResponse(data)
+            log.warning("codex empty reply, fallback ollama")
         except Exception as e:
-            log.exception("codex backend_chat failed")
-            return JSONResponse({"error": {"message": str(e)}}, status_code=502)
-    return await ollama_chat(payload)
+            log.warning("codex backend_chat failed: %s", e)
+            if force == "codex":
+                return JSONResponse({"error": {"message": str(e)}}, status_code=502)
+        else:
+            if force == "codex":
+                return JSONResponse({"error": {"message": "Codex returned an empty reply."}}, status_code=502)
+    ollama_payload = dict(payload)
+    ollama_payload["model"] = rec.get("ollama_model") or LLM_MODEL
+    return await ollama_chat(ollama_payload)
 
 
 def message_content(data: dict) -> tuple[dict, str]:
@@ -968,7 +979,13 @@ def message_content(data: dict) -> tuple[dict, str]:
 
 
 async def proxy_chat(body: dict, vision: bool = False) -> JSONResponse:
+    if is_confirm_request(body):
+        return JSONResponse(fake_tool_call({**body, "tool_choice": {"function": {"name": "confirm"}}}, "ok"))
     payload = rewrite_body(body, vision=vision)
+    if tool_name_from(payload) == "AgentOutput":
+        payload["messages"] = list(payload.get("messages") or []) + [
+            {"role": "system", "content": AGENT_OUTPUT_NUDGE}
+        ]
     result = await backend_chat(payload)
     if result.status_code >= 400:
         return result
@@ -1036,105 +1053,28 @@ async def vision_chat(body: dict):
     })
 
 
-def _jev_pick_action(criteria: list[str], goal: str, taskish: bool) -> str:
-    g = goal.lower()
-    if re.search(r"scroll(\s|_)*up|cuộn lên", g) and "scroll_up" in criteria:
-        return "scroll_up"
-    if re.search(r"scroll|cuộn|xuống dưới", g) and "scroll_down" in criteria:
-        return "scroll_down"
-    if re.search(r"\b(type|điền|nhập|gõ|fill|search for|tìm)\b", g) and "type" in criteria:
-        return "type"
-    if re.search(r"\b(select|dropdown|chọn option)\b", g) and "select" in criteria:
-        return "select"
-    if re.search(r"\b(enter|submit|gửi|press enter)\b", g) and "press_enter" in criteria:
-        return "press_enter"
-    if (taskish or g) and "click" in criteria:
-        return "click"
-    if "none" in criteria:
-        return "none"
-    return criteria[0] if criteria else "none"
-
-
-def _jev_pick_target(criteria: list[str], elements: list, action: str) -> str:
-    if not criteria:
-        return "none"
-
-    def html_of(idx: str) -> str:
-        for el in elements:
-            if str((el or {}).get("index")) == str(idx):
-                return str((el or {}).get("html") or "")
-        return ""
-
-    want = None
-    if action in ("type", "press_enter"):
-        want = re.compile(r"<(input|textarea)\b|contenteditable", re.I)
-    elif action == "select":
-        want = re.compile(r"<select\b", re.I)
-    if want:
-        for idx in criteria:
-            if want.search(html_of(idx)):
-                return idx
-    return criteria[0]
+async def _jev_chat(payload: dict, brain: str):
+    result = await backend_chat(payload, force=brain)
+    if result.status_code >= 400:
+        log.warning("jev chat %s status %s", brain, result.status_code)
+        return None
+    try:
+        return json.loads(result.body)
+    except Exception:
+        return None
 
 
 @app.post("/api/v1/jev/systemone")
 async def jev(body: dict):
-    questions = body.get("questions") or {}
-    state = body.get("state") or {}
-    answers = {}
-    blob = json.dumps(state, ensure_ascii=False).lower()
-    task = state.get("task") if isinstance(state.get("task"), dict) else {}
-    page = state.get("page") if isinstance(state.get("page"), dict) else {}
-    goal = str(task.get("goal") or "")
-    elements = page.get("elements") if isinstance(page.get("elements"), list) else []
-    taskish = bool(re.search(
-        r"\b(search|click|open|go to|browse|find|google|mở|tìm|bấm|vào trang|navigate|fill|type|submit)\b",
-        blob,
-    )) or bool(goal.strip())
-    pagish = bool(re.search(
-        r"\b(this page|on (the|this) (page|screen|tab)|what's on|look at|màn hình|trang này|trang web)\b",
-        blob,
-    ))
-    preferred_action = None
-    action_q = questions.get("action") or {}
-    if (action_q or {}).get("type") == "choice":
-        raw_c = (action_q or {}).get("criteria") or {}
-        ac = list(raw_c.keys()) if isinstance(raw_c, dict) else list(raw_c or [])
-        preferred_action = _jev_pick_action(ac, goal, taskish)
-    for name, q in questions.items():
-        qtype = (q or {}).get("type")
-        if qtype == "noul":
-            p = 0.15
-            if name in ("new_task",):
-                p = 0.1
-            elif name in ("browser_task",):
-                p = 0.72 if taskish else 0.22
-            elif name in ("about_page",):
-                p = 0.7 if pagish else 0.15
-            elif name in ("done",):
-                p = 0.2
-            elif name in ("blocked", "irreversible"):
-                p = 0.05
-            elif name == "ok":
-                p = 0.95
-            answers[name] = {"noul": p}
-        elif qtype == "choice":
-            raw_c = (q or {}).get("criteria") or {}
-            criteria = list(raw_c.keys()) if isinstance(raw_c, dict) else list(raw_c or [])
-            pick = criteria[0] if criteria else "none"
-            if name == "action":
-                pick = preferred_action or _jev_pick_action(criteria, goal, taskish)
-            elif name == "target":
-                pick = _jev_pick_target(criteria, elements, preferred_action or "click")
-            elif name == "value" and criteria:
-                pick = criteria[0]
-            elif name == "group" and criteria:
-                pick = criteria[0]
-            probs = {k: (0.9 if k == pick else 0.1 / max(len(criteria) - 1, 1)) for k in criteria} or {pick: 1.0}
-            answers[name] = {"choice": pick, "probabilities": probs}
-        else:
-            answers[name] = {"noul": 0.0}
-    return {"answers": answers, "usage": {"input_tokens": 0}}
+    rec = load_settings()
+    answers, brain = await jev_brain.answer_jev(
+        body or {},
+        _jev_chat,
+        extract_json_obj,
+        codex_llm.logged_in(),
+        rec.get("llm_backend") or "codex",
+    )
+    return {"answers": answers, "usage": {"input_tokens": 0}, "brain": brain}
 
 
 @app.post("/api/v1/realtime/speech/session")
@@ -1475,6 +1415,7 @@ def healthz():
         "ollama_model": rec.get("ollama_model"),
         "codex": rec.get("codex_model") if rec.get("llm_backend") == "codex" else None,
         "codex_logged_in": codex_llm.logged_in(),
+        "jev": "codex>ollama>regex" if rec.get("llm_backend") != "ollama" else "ollama>regex",
         "tts_gateway": rec.get("tts_gateway") or "local",
         "original_voices": bool(zw_developer_key()),
         "zerotts": local_speech.zerotts_status(),
