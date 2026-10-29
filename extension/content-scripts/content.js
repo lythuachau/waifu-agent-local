@@ -319,7 +319,57 @@
 			inline: "nearest"
 		});
 	}
+	function remainingScrollY(el, down) {
+		if (!el) return 0;
+		return down ? el.scrollHeight - el.clientHeight - el.scrollTop : el.scrollTop;
+	}
+	function fireWheel(dy, at) {
+		const x = Math.floor(window.innerWidth / 2);
+		const y = Math.floor(window.innerHeight / 2);
+		const hit = at || document.elementFromPoint(x, y) || document.body;
+		const init = {
+			bubbles: true,
+			cancelable: true,
+			composed: true,
+			deltaX: 0,
+			deltaY: dy,
+			deltaZ: 0,
+			deltaMode: 0,
+			clientX: x,
+			clientY: y,
+			view: window
+		};
+		hit.dispatchEvent(new WheelEvent("wheel", init));
+		(hit.parentElement || document).dispatchEvent(new WheelEvent("wheel", init));
+	}
+	async function fireArrow(down) {
+		const key = down ? "ArrowDown" : "ArrowUp";
+		const target = document.activeElement instanceof HTMLElement ? document.activeElement : document.body;
+		await pressKeyElement(target, key);
+	}
+	async function gestureScroll(dy, at) {
+		const beforeY = window.scrollY;
+		const beforeUrl = location.href;
+		fireWheel(dy, at);
+		fireWheel(Math.sign(dy) * Math.max(Math.abs(dy), window.innerHeight * .8), at);
+		await waitFor(.15);
+		await fireArrow(dy > 0);
+		await waitFor(.2);
+		if (location.href !== beforeUrl || Math.abs(window.scrollY - beforeY) > 1) return true;
+		return false;
+	}
+	function pickOverflowY(down) {
+		const bigEnough = (node) => node.clientHeight >= window.innerHeight * .35;
+		const canScroll = (node) => Boolean(node && /(auto|scroll|overlay)/.test(getComputedStyle(node).overflowY) && node.scrollHeight > node.clientHeight + 4 && bigEnough(node));
+		let el = document.activeElement;
+		while (el && !canScroll(el) && el !== document.body) el = el.parentElement;
+		if (canScroll(el)) return el;
+		const ranked = Array.from(document.querySelectorAll("div,main,section,ul,ol")).filter(canScroll).sort((a, b) => remainingScrollY(b, down) - remainingScrollY(a, down));
+		return ranked[0] || document.scrollingElement || document.documentElement;
+	}
 	async function scrollVertically(scroll_amount, element) {
+		const dy = scroll_amount;
+		const down = dy > 0;
 		if (element) {
 			const targetElement = element;
 			let currentElement = targetElement;
@@ -327,7 +377,6 @@
 			let scrolledElement = null;
 			let scrollDelta = 0;
 			let attempts = 0;
-			const dy = scroll_amount;
 			while (currentElement && attempts < 10) {
 				const computedStyle = window.getComputedStyle(currentElement);
 				const hasScrollableY = /(auto|scroll|overlay)/.test(computedStyle.overflowY) || computedStyle.scrollbarWidth && computedStyle.scrollbarWidth !== "auto" || computedStyle.scrollbarGutter && computedStyle.scrollbarGutter !== "auto";
@@ -352,45 +401,29 @@
 				attempts++;
 			}
 			if (scrollSuccess) return `Scrolled container (${scrolledElement?.tagName}) by ${scrollDelta}px`;
-			else return `No scrollable container found for element (${targetElement.tagName})`;
+			if (await gestureScroll(dy, targetElement)) return `✅ Sent wheel/${down ? "ArrowDown" : "ArrowUp"} on ${targetElement.tagName} (feed-style page).`;
+			return `No scrollable container found for element (${targetElement.tagName})`;
 		}
-		const dy = scroll_amount;
-		const bigEnough = (el) => el.clientHeight >= window.innerHeight * .5;
-		const canScroll = (el) => Boolean(el && /(auto|scroll|overlay)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight && bigEnough(el));
-		let el = document.activeElement;
-		while (el && !canScroll(el) && el !== document.body) el = el.parentElement;
-		el = canScroll(el) ? el : Array.from(document.querySelectorAll("*")).find(canScroll) || document.scrollingElement || document.documentElement;
+		const el = pickOverflowY(down);
 		if (el === document.scrollingElement || el === document.documentElement || el === document.body) {
 			const scrollBefore = window.scrollY;
-			const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
 			window.scrollBy(0, dy);
-			const scrollAfter = window.scrollY;
-			const scrolled = scrollAfter - scrollBefore;
-			if (Math.abs(scrolled) < 1) return dy > 0 ? `⚠️ Already at the bottom of the page, cannot scroll down further.` : `⚠️ Already at the top of the page, cannot scroll up further.`;
-			const reachedBottom = dy > 0 && scrollAfter >= scrollMax - 1;
-			const reachedTop = dy < 0 && scrollAfter <= 1;
-			if (reachedBottom) return `✅ Scrolled page by ${scrolled}px. Reached the bottom of the page.`;
-			if (reachedTop) return `✅ Scrolled page by ${scrolled}px. Reached the top of the page.`;
-			return `✅ Scrolled page by ${scrolled}px.`;
-		} else {
-			const warningMsg = `The document is not scrollable. Falling back to container scroll.`;
-			console.log(`[PageController] ${warningMsg}`);
-			const scrollBefore = el.scrollTop;
-			const scrollMax = el.scrollHeight - el.clientHeight;
-			el.scrollBy({
-				top: dy,
-				behavior: "smooth"
-			});
-			await waitFor(.1);
-			const scrollAfter = el.scrollTop;
-			const scrolled = scrollAfter - scrollBefore;
-			if (Math.abs(scrolled) < 1) return dy > 0 ? `⚠️ ${warningMsg} Already at the bottom of container (${el.tagName}), cannot scroll down further.` : `⚠️ ${warningMsg} Already at the top of container (${el.tagName}), cannot scroll up further.`;
-			const reachedBottom = dy > 0 && scrollAfter >= scrollMax - 1;
-			const reachedTop = dy < 0 && scrollAfter <= 1;
-			if (reachedBottom) return `✅ ${warningMsg} Scrolled container (${el.tagName}) by ${scrolled}px. Reached the bottom.`;
-			if (reachedTop) return `✅ ${warningMsg} Scrolled container (${el.tagName}) by ${scrolled}px. Reached the top.`;
-			return `✅ ${warningMsg} Scrolled container (${el.tagName}) by ${scrolled}px.`;
+			const scrolled = window.scrollY - scrollBefore;
+			if (Math.abs(scrolled) >= 1) return `✅ Scrolled page by ${scrolled}px.`;
+			if (await gestureScroll(dy, el)) return `✅ Sent wheel/${down ? "ArrowDown" : "ArrowUp"} (document had no overflow).`;
+			return down ? `⚠️ Already at the bottom of the page, cannot scroll down further.` : `⚠️ Already at the top of the page, cannot scroll up further.`;
 		}
+		const warningMsg = `The document is not scrollable. Falling back to container scroll.`;
+		const scrollBefore = el.scrollTop;
+		const remain = remainingScrollY(el, down);
+		el.scrollBy({ top: dy, behavior: "auto" });
+		await waitFor(.1);
+		const scrolled = el.scrollTop - scrollBefore;
+		if (Math.abs(scrolled) >= 1) return `✅ ${warningMsg} Scrolled container (${el.tagName}) by ${scrolled}px.`;
+		if (await gestureScroll(dy, el)) return `✅ Sent wheel/${down ? "ArrowDown" : "ArrowUp"} after container scrollTop did not move.`;
+		const hit = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+		if (hit && hit !== el && await gestureScroll(dy, hit)) return `✅ Sent wheel/${down ? "ArrowDown" : "ArrowUp"} on the element under the cursor.`;
+		return down ? `⚠️ ${warningMsg} Already at the bottom of container (${el.tagName}), cannot scroll down further.` : `⚠️ ${warningMsg} Already at the top of container (${el.tagName}), cannot scroll up further.`;
 	}
 	async function scrollHorizontally(scroll_amount, element) {
 		if (element) {
