@@ -28124,6 +28124,230 @@ function JevProviderSection() {
 		})]
 	});
 }
+function localOptionList(items) {
+	return (items || []).map((item) => {
+		if (typeof item === "string") return {
+			id: item,
+			label: item
+		};
+		const id = item.id || item.model;
+		return {
+			id,
+			label: item.label || id
+		};
+	}).filter((x) => x.id);
+}
+function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, previewMsg, onPreview }) {
+	const set = (key) => (e) => onChange({
+		...rec,
+		[key]: e.target.value
+	});
+	if (!catalog) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+		className: "text-[11px] text-muted-foreground",
+		children: "Đang tải Não / Giọng từ API local…"
+	});
+	if (catalog.error) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+		className: "text-[11px] text-destructive",
+		children: `Không tải được catalog: ${catalog.error}`
+	});
+	const ollama = localOptionList(catalog.ollama_models);
+	const codex = localOptionList((catalog.codex_models || []).map((id) => typeof id === "string" ? { id, label: id } : id));
+	const vis = localOptionList(catalog.vision_models);
+	const edges = localOptionList(catalog.edge_voices);
+	const persona = (catalog.personas || []).find((p) => p.avatar_id === avatarId);
+	const cstat = catalog.codex || {};
+	const speech = catalog.speech || {};
+	const zt = speech.zerotts || {};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			title: "Não",
+			info: "Codex + Ollama dự phòng. Jev cùng backend. Vision mặc định RapidOCR (nhẹ).",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-[10px] text-muted-foreground leading-relaxed",
+					children: `${ollama.length ? `Ollama ${ollama.length} model` : "Ollama không thấy model"}${cstat.logged_in ? " · Codex đã login" : " · Codex chưa login"}`
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+					label: "Backend",
+					htmlFor: "local-backend",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("select", {
+						id: "local-backend",
+						value: rec.llm_backend || "codex",
+						onChange: set("llm_backend"),
+						className: SELECT_CLASS,
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								value: "codex",
+								children: "Codex (Jev + agent, Ollama dự phòng)"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								value: "ollama",
+								children: "Ollama only (offline)"
+							})
+						]
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+					label: "Model Codex",
+					htmlFor: "local-codex",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+						id: "local-codex",
+						value: rec.codex_model || "",
+						onChange: set("codex_model"),
+						className: SELECT_CLASS,
+						children: codex.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+							value: m.id,
+							children: m.label
+						}, m.id))
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+					label: "Model Ollama (dự phòng)",
+					htmlFor: "local-ollama",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+						id: "local-ollama",
+						value: rec.ollama_model || "",
+						onChange: set("ollama_model"),
+						className: SELECT_CLASS,
+						children: ollama.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+							value: m.id,
+							children: m.label
+						}, m.id))
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+					label: "Vision",
+					htmlFor: "local-vision",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+						id: "local-vision",
+						value: rec.vision_model || "ocr",
+						onChange: set("vision_model"),
+						className: SELECT_CLASS,
+						children: vis.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+							value: m.id,
+							children: m.label
+						}, m.id))
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-[10px] text-muted-foreground leading-relaxed",
+					children: "Jev local `/jev/systemone`. Không cần key Typesafe."
+				})
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			title: "Giọng",
+			info: "Câu tiếng Việt → ZeroTTS. Nghe thử dùng API local.",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-[10px] text-muted-foreground leading-relaxed",
+					children: zt.loaded ? "ZeroTTS đã nạp." : zt.error ? `ZeroTTS lỗi: ${zt.error}` : "ZeroTTS đang nạp model…"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+					label: "Nguồn khi chat",
+					htmlFor: "local-tts-gw",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("select", {
+						id: "local-tts-gw",
+						value: rec.tts_gateway || "local",
+						onChange: set("tts_gateway"),
+						className: SELECT_CLASS,
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								value: "local",
+								children: "Local (ZeroTTS / Edge)"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								value: "zeroweight",
+								children: "Gốc ZeroWeight (Cartesia / Minimax)"
+							})
+						]
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+					label: "Engine local",
+					htmlFor: "local-engine",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("select", {
+						id: "local-engine",
+						value: rec.default_engine || "auto",
+						onChange: set("default_engine"),
+						className: SELECT_CLASS,
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								value: "auto",
+								children: "Tự động (VI → ZeroTTS)"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								value: "zerotts",
+								children: "Luôn ZeroTTS"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								value: "gtts",
+								children: "Luôn Google TTS"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								value: "edge",
+								children: "Luôn Edge Neural"
+							})
+						]
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+					label: "Giọng mặc định",
+					htmlFor: "local-edge",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+						id: "local-edge",
+						value: rec.default_edge || "",
+						onChange: set("default_edge"),
+						className: SELECT_CLASS,
+						children: edges.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+							value: m.id,
+							children: m.label
+						}, m.id))
+					})
+				}),
+				persona && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+					label: `Giọng ${persona.name || "avatar"}`,
+					htmlFor: "local-avatar-edge",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+						id: "local-avatar-edge",
+						value: rec.avatar_edge || persona.edge || "",
+						onChange: set("avatar_edge"),
+						className: SELECT_CLASS,
+						children: edges.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+							value: m.id,
+							children: m.label
+						}, m.id))
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex gap-2",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							type: "button",
+							variant: "outline",
+							disabled: previewBusy,
+							onClick: () => onPreview("default"),
+							className: "h-7 px-2 text-[11px] cursor-pointer",
+							children: previewBusy ? "Đang tạo…" : "Nghe mặc định"
+						}),
+						persona && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							type: "button",
+							variant: "outline",
+							disabled: previewBusy,
+							onClick: () => onPreview("avatar"),
+							className: "h-7 px-2 text-[11px] cursor-pointer",
+							children: "Nghe avatar"
+						})
+					]
+				}),
+				previewMsg && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-[10px] text-muted-foreground leading-relaxed",
+					children: previewMsg
+				})
+			]
+		})
+	] });
+}
 function VerifyRow({ check, disabled, onVerify }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "flex flex-col gap-1",
@@ -28241,8 +28465,48 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 	const [jev, setJev] = (0, import_react.useState)(config?.jev);
 	const [llmCheck, setLLMCheck] = (0, import_react.useState)(() => savedChecks(config).llm);
 	const [jevCheck, setJevCheck] = (0, import_react.useState)(() => savedChecks(config).jev);
-	const [advancedOpen, setAdvancedOpen] = (0, import_react.useState)(!!config?.llm || !!config?.jev);
+	const [advancedOpen, setAdvancedOpen] = (0, import_react.useState)(false);
 	const [saving, setSaving] = (0, import_react.useState)(false);
+	const [catalog, setCatalog] = (0, import_react.useState)(null);
+	const [localRec, setLocalRec] = (0, import_react.useState)({});
+	const [previewBusy, setPreviewBusy] = (0, import_react.useState)(false);
+	const [previewMsg, setPreviewMsg] = (0, import_react.useState)("");
+	(0, import_react.useEffect)(() => {
+		let cancelled = false;
+		fetch(`${ZEROWEIGHT_API}/local/catalog`).then((r) => {
+			if (!r.ok) throw new Error(`catalog ${r.status}`);
+			return r.json();
+		}).then((c) => {
+			if (cancelled) return;
+			setCatalog(c);
+			const s = c.settings || {};
+			const persona = (c.personas || []).find((p) => p.avatar_id === (config?.avatarId ?? ""));
+			setLocalRec({
+				llm_backend: s.llm_backend || "codex",
+				ollama_model: s.ollama_model || "llama3.2",
+				codex_model: s.codex_model || "",
+				vision_model: s.vision_model || "ocr",
+				default_engine: s.default_engine || "auto",
+				default_edge: s.default_edge || "",
+				tts_gateway: s.tts_gateway || "local",
+				avatar_edge: persona?.edge || s.default_edge || ""
+			});
+		}).catch((error) => {
+			console.error("[ConfigPanel] catalog", error);
+			if (!cancelled) setCatalog({ error: String(error.message || error) });
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+	(0, import_react.useEffect)(() => {
+		if (!catalog?.personas) return;
+		const persona = catalog.personas.find((p) => p.avatar_id === avatarId);
+		if (persona?.edge) setLocalRec((cur) => ({
+			...cur,
+			avatar_edge: persona.edge
+		}));
+	}, [avatarId, catalog]);
 	const [prevConfig, setPrevConfig] = (0, import_react.useState)(config);
 	if (prevConfig !== config) {
 		setPrevConfig(config);
@@ -28255,7 +28519,6 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 		setJev(config?.jev);
 		setLLMCheck(savedChecks(config).llm);
 		setJevCheck(savedChecks(config).jev);
-		if (config?.llm || config?.jev) setAdvancedOpen(true);
 	}
 	const llmSig = llm && llmSignature(llm);
 	const jevSig = jev && jevSignature(jev);
@@ -28268,17 +28531,84 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 		model: settings.model.trim()
 	} }))), []);
 	const verifyJevNow = (0, import_react.useCallback)((settings) => runCheck(jevSignature(settings), setJevCheck, () => verifyJev(cleanKey(settings.apiKey))), []);
-	const saveBlockedReason = llm && !llm.model.trim() ? "Pick a model (Advanced)" : void 0;
+	const saveBlockedReason = void 0;
 	/** Local Codex/Ollama must answer a tool call before they replace the default proxy. */
 	const verifyChanged = async () => {
 		const llmOk = !llm || llmCheck?.sig === llmSig && llmCheck?.state === "ok" || await verifyLLMNow(llm);
 		return llmOk;
 	};
+	const previewVoice = async (which) => {
+		setPreviewBusy(true);
+		setPreviewMsg("");
+		try {
+			const edge = which === "avatar" ? localRec.avatar_edge : localRec.default_edge;
+			const rec = (catalog?.edge_voices || []).find((v) => v.id === edge);
+			let engine = localRec.default_engine || "auto";
+			if (rec && (rec.engine === "zerotts" || rec.engine === "gtts")) engine = rec.engine;
+			const r = await fetch(`${ZEROWEIGHT_API}/local/tts-preview`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					text: "Xin chào, đây là giọng thử của mình.",
+					edge,
+					engine,
+					provider: "minimax"
+				})
+			});
+			if (!r.ok) {
+				const err = await r.json().catch(() => ({}));
+				throw new Error((err.error && err.error.message) || r.statusText);
+			}
+			const blob = await r.blob();
+			const url = URL.createObjectURL(blob);
+			const audio = new Audio(url);
+			await audio.play();
+			setPreviewMsg("Đang phát");
+		} catch (error) {
+			setPreviewMsg(String(error.message || error));
+		} finally {
+			setPreviewBusy(false);
+		}
+	};
+	const saveLocalRuntime = async () => {
+		if (!catalog || catalog.error) return;
+		const voice_map = {};
+		for (const p of catalog.personas || []) {
+			const edge = p.avatar_id === avatarId && localRec.avatar_edge ? localRec.avatar_edge : p.edge;
+			const rec = (catalog.edge_voices || []).find((v) => v.id === edge);
+			const mapped = rec && (rec.engine === "gtts" || rec.engine === "zerotts") ? rec.engine : "auto";
+			if (p.voice_id && edge) voice_map[p.voice_id] = {
+				edge,
+				engine: mapped
+			};
+		}
+		const r = await fetch(`${ZEROWEIGHT_API}/local/settings`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				llm_backend: localRec.llm_backend,
+				ollama_model: localRec.ollama_model,
+				codex_model: localRec.codex_model,
+				vision_model: localRec.vision_model,
+				default_engine: localRec.default_engine,
+				default_edge: localRec.default_edge,
+				tts_gateway: localRec.tts_gateway,
+				voice_map
+			})
+		});
+		if (!r.ok) {
+			const err = await r.json().catch(() => ({}));
+			throw new Error((err.error && err.error.message) || `settings ${r.status}`);
+		}
+	};
 	const handleSave = async () => {
 		setSaving(true);
 		try {
-			if (!await verifyChanged()) {
-				setAdvancedOpen(true);
+			try {
+				await saveLocalRuntime();
+			} catch (error) {
+				console.error("[ConfigPanel] local settings", error);
+				setPreviewMsg(`Lưu Não/Giọng lỗi: ${error.message || error}`);
 				return;
 			}
 			await onSave({
@@ -28287,7 +28617,7 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 				language,
 				maxSteps: maxSteps || void 0,
 				systemInstruction: systemInstruction || void 0,
-				llm,
+				llm: void 0,
 				jev: void 0
 			});
 		} finally {
@@ -28334,6 +28664,15 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 					})
 				]
 			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LocalRuntimeSection, {
+				catalog,
+				rec: localRec,
+				onChange: setLocalRec,
+				avatarId,
+				previewBusy,
+				previewMsg,
+				onPreview: previewVoice
+			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
 				label: "Response language",
 				htmlFor: "language",
@@ -28359,14 +28698,6 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 				children: ["Advanced", advancedOpen ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FoldVertical, { className: "size-3" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(UnfoldVertical, { className: "size-3" })]
 			}),
 			advancedOpen && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LLMProviderSection, {
-					value: llm,
-					saved: config?.llm,
-					onChange: setLLM,
-					check: llmCheck?.sig === llmSig ? llmCheck : null,
-					onVerify: () => llm && void verifyLLMNow(llm)
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(JevProviderSection, {}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
 					label: "Max steps",
 					htmlFor: "max-steps",
