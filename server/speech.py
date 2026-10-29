@@ -317,16 +317,60 @@ def float_to_pcm_f32le(audio: np.ndarray, sample_rate: int, rate: int = CARTESIA
         Path(dest.name).unlink(missing_ok=True)
 
 
-def _zerotts_float(text: str, speaker: str) -> tuple[np.ndarray, int]:
-    tts = get_zerotts()
-    from zerotts.audio import concat_with_silence
+def resample_linear(audio: np.ndarray, src_rate: int, dst_rate: int) -> np.ndarray:
+    x = np.asarray(audio, dtype=np.float32).reshape(-1)
+    if src_rate == dst_rate or x.size < 2:
+        return x
+    n_out = max(1, int(round(x.size * dst_rate / src_rate)))
+    t_src = np.linspace(0.0, 1.0, x.size, endpoint=False)
+    t_dst = np.linspace(0.0, 1.0, n_out, endpoint=False)
+    return np.interp(t_dst, t_src, x).astype(np.float32)
+
+
+def zerotts_text_segments(text: str) -> list[str]:
     from zerotts.chunking import chunk_text, clean_segment_punctuation, normalize_punctuation
 
     segs = [
         clean_segment_punctuation(s)
         for s in chunk_text(normalize_punctuation(text), max_chunk_sec=15.0)
     ]
-    segs = [s for s in segs if s.strip()] or [text]
+    return [s for s in segs if s.strip()] or [text]
+
+
+def will_use_zerotts(text: str, voice_id: str | None) -> tuple[bool, str]:
+    info = voice_info(voice_id)
+    table = load_voices()
+    edge = info.get("edge") or table.get("default_edge") or TTS_VOICE
+    engine = (info.get("engine") or table.get("default_engine") or "auto").lower()
+    if str(edge).startswith("zerotts"):
+        engine = "zerotts"
+    speaker = zerotts_speaker(edge)
+    use = engine == "zerotts" or (engine == "auto" and looks_vietnamese(text or ""))
+    return use, speaker
+
+
+def iter_zerotts_pcm_f32le(text: str, speaker: str):
+    """Yield Cartesia-wire pcm_f32le @ 44100 chunks from ZeroTTS.synthesize_stream."""
+    tts = get_zerotts()
+    sr = int(tts.sample_rate)
+    with _synth_lock:
+        for seg in zerotts_text_segments(text):
+            for chunk in tts.synthesize_stream(
+                seg,
+                voice=speaker,
+                first_chunk_frames=2,
+                max_chunk_frames=8,
+            ):
+                pcm = resample_linear(chunk, sr, CARTESIA_RATE)
+                if pcm.size:
+                    yield pcm.tobytes()
+
+
+def _zerotts_float(text: str, speaker: str) -> tuple[np.ndarray, int]:
+    tts = get_zerotts()
+    from zerotts.audio import concat_with_silence
+
+    segs = zerotts_text_segments(text)
     chunks: list[np.ndarray] = []
     with _synth_lock:
         for seg in segs:

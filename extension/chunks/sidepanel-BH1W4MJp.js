@@ -23652,9 +23652,13 @@ var Playback = class {
 				if (nonce !== this.#nonce) return;
 				continue;
 			}
-			const buffer = await (prefetched?.index === i ? prefetched.buffer : this.#synthesise(chunk.text));
-			if (!buffer || nonce !== this.#nonce) return;
-			await this.#playOne(buffer, nonce);
+			if (prefetched?.index === i) {
+				const buffer = await prefetched.buffer;
+				if (!buffer || nonce !== this.#nonce) return;
+				await this.#playOne(buffer, nonce);
+			} else {
+				await this.#playStream(chunk.text, nonce);
+			}
 			if (nonce !== this.#nonce) return;
 		}
 	}
@@ -23703,6 +23707,122 @@ var Playback = class {
 		const run = this.#synthesising.then(() => this.#synthesiseNow(text));
 		this.#synthesising = run.catch(() => {});
 		return run;
+	}
+	async #playStream(text, nonce) {
+		const ws = await this.#connect();
+		const context = this.#ensureContext();
+		if (!await this.#ensureRunning(context)) throw new Error("The browser blocked her voice: click in the side panel (or press Send) to allow sound.");
+		if (nonce !== this.#nonce) return;
+		const voice = this.voice();
+		return new Promise((resolve) => {
+			let rate = CARTESIA_SAMPLE_RATE;
+			let streamPcm = false;
+			let collected = [];
+			let playHead = 0;
+			let gotAudio = false;
+			let settled = false;
+			let timer = null;
+			const finish = async (legacyFrames) => {
+				if (settled) return;
+				settled = true;
+				if (timer) clearTimeout(timer);
+				ws.onmessage = null;
+				if (legacyFrames && legacyFrames.length) {
+					try {
+						const bytes = concat(legacyFrames);
+						const buffer = voice.provider === "cartesia" ? pcmF32ToBuffer(context, bytes, CARTESIA_SAMPLE_RATE) : await context.decodeAudioData(bytes.slice(0));
+						if (buffer && nonce === this.#nonce) await this.#playOne(buffer, nonce);
+					} catch (error) {
+						this.events.onError(`Could not decode the audio (${voice.provider}).`);
+						console.warn("[character/tts] decode failed", error);
+					}
+				}
+				if (gotAudio) this.events.onAudio(false);
+				resolve();
+			};
+			const bump = () => {
+				if (settled) return;
+				if (timer) clearTimeout(timer);
+				timer = setTimeout(() => {
+					console.warn("[character/tts] synthesis timed out");
+					finish(collected.length ? collected : null);
+				}, CHUNK_TIMEOUT_MS);
+			};
+			const schedule = (buffer) => {
+				if (nonce !== this.#nonce || settled || !buffer || buffer.length < 32) return;
+				const source = context.createBufferSource();
+				source.buffer = buffer;
+				source.connect(context.destination);
+				const now = context.currentTime;
+				if (!gotAudio) {
+					playHead = now + 0.04;
+					this.events.onAudio(true);
+					gotAudio = true;
+				}
+				const startAt = Math.max(playHead, now);
+				try {
+					source.start(startAt);
+				} catch {
+					return;
+				}
+				playHead = startAt + buffer.duration;
+				this.#source = source;
+			};
+			ws.onmessage = (event) => {
+				if (nonce !== this.#nonce) {
+					finish(null);
+					return;
+				}
+				if (typeof event.data !== "string") {
+					bump();
+					if (streamPcm) {
+						try {
+							schedule(pcmF32ToBuffer(context, event.data, rate));
+						} catch (error) {
+							console.warn("[character/tts] pcm chunk", error);
+						}
+					} else collected.push(event.data);
+					return;
+				}
+				let payload;
+				try {
+					payload = JSON.parse(event.data);
+				} catch {
+					return;
+				}
+				if (payload.type === "start" && payload.format === "pcm_f32le") {
+					streamPcm = true;
+					rate = payload.sample_rate || CARTESIA_SAMPLE_RATE;
+					bump();
+					return;
+				}
+				if (payload.type === "progress") {
+					bump();
+					return;
+				}
+				if (payload.type === "done") {
+					if (streamPcm) {
+						const waitMs = Math.max(0, (playHead - context.currentTime) * 1e3) + 80;
+						setTimeout(() => finish(null), waitMs);
+					} else finish(collected.length ? collected : null);
+					return;
+				}
+				if (payload.type === "error") {
+					this.events.onError(payload.message ?? "speech failed");
+					finish(null);
+				}
+			};
+			try {
+				ws.send(JSON.stringify({
+					voice_id: voice.voiceId,
+					text,
+					stream: true
+				}));
+			} catch {
+				finish(null);
+			}
+			bump();
+		});
 	}
 	async #synthesiseNow(text) {
 		const ws = await this.#connect();

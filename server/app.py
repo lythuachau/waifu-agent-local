@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 from pathlib import Path
 
@@ -1412,6 +1413,46 @@ async def speech_socket(ws: WebSocket, kind: str):
             voice_id = req.get("voice_id")
             provider = local_speech.provider_for(voice_id, PERSONAS)
             log.info("tts ws chars=%s voice=%s", len(spoken), voice_id)
+            use_zt, speaker = local_speech.will_use_zerotts(spoken, voice_id)
+            if use_zt:
+                try:
+                    local_speech.get_zerotts()
+                except Exception as e:
+                    log.warning("ZeroTTS unavailable, full synth: %s", e)
+                    use_zt = False
+            if use_zt:
+                q: asyncio.Queue = asyncio.Queue(maxsize=6)
+                loop = asyncio.get_running_loop()
+
+                def _produce() -> None:
+                    try:
+                        n = 0
+                        for pcm in local_speech.iter_zerotts_pcm_f32le(spoken, speaker):
+                            n += 1
+                            fut = asyncio.run_coroutine_threadsafe(q.put(pcm), loop)
+                            fut.result(timeout=60)
+                        asyncio.run_coroutine_threadsafe(q.put(None), loop).result(timeout=10)
+                        log.info("tts ws stream chunks=%s speaker=%s", n, speaker)
+                    except Exception as e:
+                        log.warning("tts ws stream failed: %s", e)
+                        asyncio.run_coroutine_threadsafe(q.put(e), loop)
+
+                threading.Thread(target=_produce, daemon=True, name="zerotts-stream").start()
+                await ws.send_text(json.dumps({
+                    "type": "start",
+                    "format": "pcm_f32le",
+                    "sample_rate": local_speech.CARTESIA_RATE,
+                }))
+                while True:
+                    item = await q.get()
+                    if item is None:
+                        break
+                    if isinstance(item, Exception):
+                        await ws.send_text(json.dumps({"type": "error", "message": str(item)}))
+                        break
+                    await ws.send_bytes(item)
+                await ws.send_text(json.dumps({"type": "done"}))
+                continue
             synth = asyncio.create_task(
                 local_speech.synthesise(spoken, voice_id=voice_id, provider=provider)
             )
