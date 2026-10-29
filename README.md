@@ -21,6 +21,7 @@ Animated avatars run fully offline. `offline_pack.py` downloaded the 9 system `.
 
 - Python 3.11+
 - Chrome (load unpacked)
+- ZeroTTS Python package from `https://github.com/lythuachau/ZeroTTS` (pulled by `start.ps1` via `server/requirements.txt`; not PyPI)
 - An LLM backend:
   - Ollama: `ollama serve` then `ollama pull llama3.2`
   - Codex / ChatGPT: `codex login` on this PC, then pick Codex at `http://127.0.0.1:8787/settings` or Advanced → Provider **Codex (ChatGPT on this PC)**, key `local`

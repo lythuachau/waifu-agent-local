@@ -3,7 +3,9 @@ uvicorn[standard]>=0.32.0
 httpx>=0.27.0
 edge-tts>=6.1.0
 gTTS>=2.5.0
-zerotts>=0.1.2
+# Install the Python package from our fork, not PyPI / zeroweight-ai.
+# ONNX weights still download from Hugging Face zeroweight-ai/ZeroTTS (~900 MB) on first TTS.
+zerotts @ git+https://github.com/lythuachau/ZeroTTS.git@main
 pyttsx3>=2.90
 faster-whisper>=1.0.0
 numpy>=1.26.0

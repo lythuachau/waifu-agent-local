@@ -53,7 +53,7 @@ So avatar voices (Zera Cartesia UUID, Minimax `zw_minimax_voice_*`) **cannot** b
 Wired into `server/speech.py`. `default_engine=auto` plus Vietnamese text uses ZeroTTS (speaker `maichi` unless the catalog id is `zerotts-<name>`). Catalog ids: `zerotts-maichi`, `zerotts-baotrang`, `zerotts-kimoanh`, `zerotts-hamy`, `zerotts-giahuy`, `zerotts-huuduc`, `zerotts-quangminh`, `zerotts-tiendat`. gTTS remains the fallback. Settings: `/settings` → Engine local.
 
 ```
-pip install zerotts
+pip install "zerotts @ git+https://github.com/lythuachau/ZeroTTS.git@main"
 ```
 
 Eight baked speakers. Platform `.zip` clones install with `tts.add_voices("voice.zip")`. This is **not** Cartesia Zera. First load downloads ~900 MB from Hugging Face (`zeroweight-ai/ZeroTTS`).
