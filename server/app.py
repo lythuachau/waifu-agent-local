@@ -588,11 +588,22 @@ AGENT_ACTION_ALIAS = {
     "scroll": "scroll",
     "scroll_down": "scroll",
     "scroll_up": "scroll",
+    "scroll_horizontally": "scroll_horizontally",
     "wait": "wait",
     "done": "done",
     "finish": "done",
     "act": "act",
     "ask_user": "ask_user",
+    "go_to_url": "go_to_url",
+    "navigate": "go_to_url",
+    "open_url": "go_to_url",
+    "open_new_tab": "open_new_tab",
+    "new_tab": "open_new_tab",
+    "switch_to_tab": "switch_to_tab",
+    "switch_tab": "switch_to_tab",
+    "close_tab": "close_tab",
+    "move_avatar": "move_avatar",
+    "execute_javascript": "execute_javascript",
 }
 
 AGENT_OUTPUT_NUDGE = (
@@ -600,8 +611,10 @@ AGENT_OUTPUT_NUDGE = (
     '{"evaluation_previous_goal":"short","memory":"short","next_goal":"short",'
     '"action":{"click_element_by_index":{"index":0}}}\n'
     "action is exactly one key: click_element_by_index {index}, "
-    "input_text {index,text}, press_key {key}, scroll {down:true}, wait {seconds}, "
-    "done {text,success}, act {goal}. Use a numeric [index] from Interactive Elements."
+    "input_text {index,text}, press_key {key}, scroll {down:true}, "
+    "go_to_url {url}, open_new_tab {url}, switch_to_tab {tab_id}, close_tab {tab_id}, "
+    "wait {seconds}, done {text,success}, act {goal,values}. "
+    "Use a numeric [index] from Interactive Elements."
 )
 
 
@@ -667,6 +680,59 @@ def _sanitize_scroll(payload: dict) -> dict:
     return out
 
 
+def _sanitize_scroll_h(payload: dict) -> dict:
+    out = dict(payload)
+    right = out.get("right")
+    if isinstance(right, (int, float)) and not isinstance(right, bool) and abs(right) > 1:
+        if out.get("pixels") is None:
+            out["pixels"] = int(abs(right))
+        out["right"] = right > 0
+    else:
+        out["right"] = _as_bool(right, True)
+    if _as_int(out.get("pixels")) is None:
+        out["pixels"] = 400
+    return out
+
+
+def _url_from(raw, obj: dict, content: str, last_user: str) -> str:
+    if isinstance(raw, dict):
+        for key in ("url", "href", "link"):
+            if raw.get(key):
+                return str(raw[key]).strip()
+    if isinstance(raw, str) and re.match(r"https?://", raw.strip(), re.I):
+        return raw.strip()
+    if obj.get("url"):
+        return str(obj["url"]).strip()
+    m = re.search(r"https?://[^\s\"'<>]+", f"{content}\n{last_user}")
+    return m.group(0) if m else ""
+
+
+def _tab_id_from(raw, obj: dict) -> int:
+    if isinstance(raw, dict):
+        n = _as_int(raw.get("tab_id") or raw.get("tabId") or raw.get("id"))
+        if n is not None:
+            return n
+    n = _as_int(raw)
+    if n is not None:
+        return n
+    n = _as_int(obj.get("tab_id") or obj.get("tabId"))
+    return n if n is not None else 0
+
+
+def _sanitize_act(raw, obj: dict, content: str) -> dict:
+    src = raw if isinstance(raw, dict) else {}
+    goal = str(src.get("goal") or obj.get("goal") or raw or content or "")[:500]
+    out = {"goal": goal}
+    values = src.get("values") or obj.get("values")
+    if isinstance(values, list):
+        out["values"] = [str(v) for v in values[:20]]
+    elif isinstance(values, str) and values.strip():
+        out["values"] = [values.strip()]
+    if src.get("allow_irreversible") is not None or obj.get("allow_irreversible") is not None:
+        out["allow_irreversible"] = _as_bool(src.get("allow_irreversible", obj.get("allow_irreversible")), False)
+    return out
+
+
 def _tool_input(name: str, raw, obj: dict, content: str, last_user: str) -> dict:
     if isinstance(raw, dict) and raw:
         if name == "click_element_by_index" and _as_int(raw.get("index")) is None:
@@ -675,8 +741,12 @@ def _tool_input(name: str, raw, obj: dict, content: str, last_user: str) -> dict
                 raw = {**raw, "index": n}
         if name == "scroll":
             return _sanitize_scroll(raw)
+        if name == "scroll_horizontally":
+            return _sanitize_scroll_h(raw)
         if name == "done" and "success" in raw:
             return {**raw, "success": _as_bool(raw.get("success"), True)}
+        if name == "act":
+            return _sanitize_act(raw, obj, content)
         return raw
     if name == "click_element_by_index":
         n = _index_from(obj, content, last_user)
@@ -713,9 +783,25 @@ def _tool_input(name: str, raw, obj: dict, content: str, last_user: str) -> dict
             success = True
         return {"text": str(text)[:2000], "success": bool(success)}
     if name == "act":
-        return {"goal": str(obj.get("goal") or raw or content)[:500]}
+        return _sanitize_act(raw, obj, content)
     if name == "ask_user":
         return {"question": str(obj.get("question") or content)[:500]}
+    if name in ("go_to_url", "open_new_tab"):
+        return {"url": _url_from(raw, obj, content, last_user)}
+    if name in ("switch_to_tab", "close_tab"):
+        return {"tab_id": _tab_id_from(raw, obj)}
+    if name == "scroll_horizontally":
+        return _sanitize_scroll_h(raw if isinstance(raw, dict) else {"right": True})
+    if name == "move_avatar":
+        pos = obj.get("position") or (raw.get("position") if isinstance(raw, dict) else raw) or "bottom-right"
+        allowed = {
+            "bottom-right", "bottom-left", "top-right", "top-left", "middle-right", "middle-left"
+        }
+        pos = str(pos)
+        return {"position": pos if pos in allowed else "bottom-right"}
+    if name == "execute_javascript":
+        script = obj.get("script") or (raw if isinstance(raw, str) else "")
+        return {"script": str(script)}
     return raw if isinstance(raw, dict) else {}
 
 
@@ -738,9 +824,15 @@ def coerce_agent_output(content: str, parsed: dict | None = None, last_user: str
                 raw_input = obj.get(key)
                 break
     mapped = AGENT_ACTION_ALIAS.get((tool_name or "").lower()) if tool_name else None
+    if not mapped and (tool_name or "").lower() in AGENT_ACTION_ALIAS.values():
+        mapped = (tool_name or "").lower()
     if not mapped:
         mapped = "wait"
         raw_input = {"seconds": 1}
+    if mapped == "scroll" and (tool_name or "").lower() == "scroll_up":
+        raw_input = {**(raw_input if isinstance(raw_input, dict) else {}), "down": False}
+    elif mapped == "scroll" and (tool_name or "").lower() == "scroll_down":
+        raw_input = {**(raw_input if isinstance(raw_input, dict) else {}), "down": True}
     payload = _tool_input(mapped, raw_input, obj, content or "", last_user or "")
     return {
         "evaluation_previous_goal": str(obj.get("evaluation_previous_goal") or "step"),
@@ -944,20 +1036,71 @@ async def vision_chat(body: dict):
     })
 
 
+def _jev_pick_action(criteria: list[str], goal: str, taskish: bool) -> str:
+    g = goal.lower()
+    if re.search(r"scroll(\s|_)*up|cuộn lên", g) and "scroll_up" in criteria:
+        return "scroll_up"
+    if re.search(r"scroll|cuộn|xuống dưới", g) and "scroll_down" in criteria:
+        return "scroll_down"
+    if re.search(r"\b(type|điền|nhập|gõ|fill|search for|tìm)\b", g) and "type" in criteria:
+        return "type"
+    if re.search(r"\b(select|dropdown|chọn option)\b", g) and "select" in criteria:
+        return "select"
+    if re.search(r"\b(enter|submit|gửi|press enter)\b", g) and "press_enter" in criteria:
+        return "press_enter"
+    if (taskish or g) and "click" in criteria:
+        return "click"
+    if "none" in criteria:
+        return "none"
+    return criteria[0] if criteria else "none"
+
+
+def _jev_pick_target(criteria: list[str], elements: list, action: str) -> str:
+    if not criteria:
+        return "none"
+
+    def html_of(idx: str) -> str:
+        for el in elements:
+            if str((el or {}).get("index")) == str(idx):
+                return str((el or {}).get("html") or "")
+        return ""
+
+    want = None
+    if action in ("type", "press_enter"):
+        want = re.compile(r"<(input|textarea)\b|contenteditable", re.I)
+    elif action == "select":
+        want = re.compile(r"<select\b", re.I)
+    if want:
+        for idx in criteria:
+            if want.search(html_of(idx)):
+                return idx
+    return criteria[0]
+
+
 @app.post("/api/v1/jev/systemone")
 async def jev(body: dict):
     questions = body.get("questions") or {}
     state = body.get("state") or {}
     answers = {}
     blob = json.dumps(state, ensure_ascii=False).lower()
+    task = state.get("task") if isinstance(state.get("task"), dict) else {}
+    page = state.get("page") if isinstance(state.get("page"), dict) else {}
+    goal = str(task.get("goal") or "")
+    elements = page.get("elements") if isinstance(page.get("elements"), list) else []
     taskish = bool(re.search(
         r"\b(search|click|open|go to|browse|find|google|mở|tìm|bấm|vào trang|navigate|fill|type|submit)\b",
         blob,
-    ))
+    )) or bool(goal.strip())
     pagish = bool(re.search(
         r"\b(this page|on (the|this) (page|screen|tab)|what's on|look at|màn hình|trang này|trang web)\b",
         blob,
     ))
+    preferred_action = None
+    action_q = questions.get("action") or {}
+    if (action_q or {}).get("type") == "choice":
+        raw_c = (action_q or {}).get("criteria") or {}
+        ac = list(raw_c.keys()) if isinstance(raw_c, dict) else list(raw_c or [])
+        preferred_action = _jev_pick_action(ac, goal, taskish)
     for name, q in questions.items():
         qtype = (q or {}).get("type")
         if qtype == "noul":
@@ -980,11 +1123,12 @@ async def jev(body: dict):
             criteria = list(raw_c.keys()) if isinstance(raw_c, dict) else list(raw_c or [])
             pick = criteria[0] if criteria else "none"
             if name == "action":
-                if taskish and "click" in criteria:
-                    pick = "click"
-                elif "none" in criteria:
-                    pick = "none"
-            elif name in ("target", "value") and criteria:
+                pick = preferred_action or _jev_pick_action(criteria, goal, taskish)
+            elif name == "target":
+                pick = _jev_pick_target(criteria, elements, preferred_action or "click")
+            elif name == "value" and criteria:
+                pick = criteria[0]
+            elif name == "group" and criteria:
                 pick = criteria[0]
             probs = {k: (0.9 if k == pick else 0.1 / max(len(criteria) - 1, 1)) for k in criteria} or {pick: 1.0}
             answers[name] = {"choice": pick, "probabilities": probs}
