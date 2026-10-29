@@ -10,6 +10,7 @@ server/data/zw_key.txt
 .env.*
 
 # local avatar clips (~3 GB). Keep on disk; GitHub 100 MB/file and repo size caps.
+server/data/zerotts-refs/*.mp3
 server/static/zai/
 sample.zai
 

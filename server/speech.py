@@ -337,6 +337,21 @@ def zerotts_text_segments(text: str) -> list[str]:
     return [s for s in segs if s.strip()] or [text]
 
 
+def will_use_vieneu(text: str, voice_id: str | None) -> tuple[bool, str]:
+    use_zt, speaker = will_use_zerotts(text, voice_id)
+    if not use_zt:
+        return False, speaker
+    try:
+        import vieneu_tts
+    except Exception:
+        return False, speaker
+    if not vieneu_tts.available():
+        return False, speaker
+    if speaker not in {n for n, _l, _g in vieneu_tts.SPEAKERS}:
+        return False, speaker
+    return True, speaker
+
+
 def will_use_zerotts(text: str, voice_id: str | None) -> tuple[bool, str]:
     info = voice_info(voice_id)
     table = load_voices()
@@ -499,6 +514,28 @@ async def synthesise(
     elif str(edge).startswith("gtts"):
         engine = "gtts"
     speaker = zerotts_speaker(edge)
+    use_vn = False
+    vn_spk = speaker
+    if engine in ("zerotts", "auto") and (engine == "zerotts" or looks_vietnamese(text)):
+        try:
+            import vieneu_tts as _vn
+            use_vn = _vn.available() and speaker in {n for n, _l, _g in _vn.SPEAKERS}
+        except Exception:
+            use_vn = False
+    if use_vn:
+        try:
+            import vieneu_tts as _vn
+            parts = []
+            for b in _vn.iter_pcm_f32le(text, vn_spk, CARTESIA_RATE):
+                parts.append(np.frombuffer(b, dtype=np.float32))
+            if parts:
+                wav = np.concatenate(parts)
+                log.info("tts vi VieNeu speaker=%s samples=%s", vn_spk, wav.size)
+                if prov == "cartesia":
+                    return wav.astype(np.float32).tobytes(), "pcm_f32le"
+                return float_to_mp3(wav, CARTESIA_RATE), "mp3"
+        except Exception as e:
+            log.warning("VieNeu synthesise failed, ZeroTTS fallback: %s", e)
     mp3 = b""
     zt_audio: np.ndarray | None = None
     zt_sr = 48000

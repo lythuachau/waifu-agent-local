@@ -26,6 +26,7 @@ import speech as local_speech
 import codex_llm
 import jev_brain
 import vision_ocr
+import vieneu_tts
 
 log = logging.getLogger("zw.local")
 
@@ -86,6 +87,7 @@ if (STATIC / "avatars").exists():
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 local_speech.start_warmup()
+threading.Thread(target=lambda: vieneu_tts.get_engine(), daemon=True, name="vieneu-warmup").start()
 
 
 def any_key(_x_zw_api_key: str | None, authorization: str | None) -> str:
@@ -1414,6 +1416,43 @@ async def speech_socket(ws: WebSocket, kind: str):
             provider = local_speech.provider_for(voice_id, PERSONAS)
             log.info("tts ws chars=%s voice=%s", len(spoken), voice_id)
             use_zt, speaker = local_speech.will_use_zerotts(spoken, voice_id)
+            use_vn, vn_speaker = local_speech.will_use_vieneu(spoken, voice_id)
+            if use_vn:
+                q: asyncio.Queue = asyncio.Queue(maxsize=6)
+                loop = asyncio.get_running_loop()
+
+                def _produce_vn() -> None:
+                    try:
+                        n = 0
+                        for pcm in vieneu_tts.iter_pcm_f32le(spoken, vn_speaker, local_speech.CARTESIA_RATE):
+                            n += 1
+                            fut = asyncio.run_coroutine_threadsafe(q.put(pcm), loop)
+                            fut.result(timeout=60)
+                        asyncio.run_coroutine_threadsafe(q.put(None), loop).result(timeout=10)
+                        log.info("tts ws vieneu chunks=%s speaker=%s", n, vn_speaker)
+                    except Exception as e:
+                        log.warning("tts ws vieneu failed: %s", e)
+                        asyncio.run_coroutine_threadsafe(q.put(e), loop)
+
+                threading.Thread(target=_produce_vn, daemon=True, name="vieneu-stream").start()
+                await ws.send_text(json.dumps({
+                    "type": "start",
+                    "format": "pcm_f32le",
+                    "sample_rate": local_speech.CARTESIA_RATE,
+                }))
+                vn_ok = True
+                while True:
+                    item = await q.get()
+                    if item is None:
+                        break
+                    if isinstance(item, Exception):
+                        vn_ok = False
+                        log.warning("vieneu stream error, fallback ZeroTTS")
+                        break
+                    await ws.send_bytes(item)
+                if vn_ok:
+                    await ws.send_text(json.dumps({"type": "done"}))
+                    continue
             if use_zt:
                 try:
                     local_speech.get_zerotts()
@@ -1606,6 +1645,7 @@ async def local_catalog():
             "gateway": rec.get("tts_gateway") or "local",
             "original_available": bool(zw_developer_key()),
             "zerotts": local_speech.zerotts_status(),
+            "vieneu": vieneu_tts.status(),
         },
     }
 
@@ -1671,6 +1711,7 @@ def healthz():
         "tts_gateway": rec.get("tts_gateway") or "local",
         "original_voices": bool(zw_developer_key()),
         "zerotts": local_speech.zerotts_status(),
+        "vieneu": vieneu_tts.status(),
     }
 
 

@@ -6,6 +6,7 @@ gTTS>=2.5.0
 # Install the Python package from our fork, not PyPI / zeroweight-ai.
 # ONNX weights still download from Hugging Face zeroweight-ai/ZeroTTS (~900 MB) on first TTS.
 zerotts @ git+https://github.com/lythuachau/ZeroTTS.git@main
+vieneu>=3.8.3
 # CUDA EP (needs CUDA 13 cublasLt64_13 + cuDNN 9 on PATH). Falls back to CPU.
 onnxruntime-gpu>=1.28
 pyttsx3>=2.90
