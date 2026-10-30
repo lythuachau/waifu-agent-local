@@ -6,8 +6,7 @@
  *
  * This file:
  *   1. Injects content-scripts/content.js on demand (scripting permission).
- *   2. Opens http://127.0.0.1:8787/stage when the active tab cannot host her,
- *      except chrome://extensions (Manage extension stays on that page).
+ *   2. Does not navigate chrome:// (Manage extension, NTP, …) to /stage.
  *   3. Always mounts a preview of her inside the side panel so she is visible
  *      even while the user is still on chrome://extensions.
  */
@@ -18,10 +17,6 @@
 		if (!url) return true;
 		return /^(chrome|edge|devtools|chrome-extension|about|brave|opera|vivaldi):/i.test(url)
 			|| /chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(url);
-	}
-
-	function isExtensionsManager(url) {
-		return /^(chrome|edge):\/\/extensions(\/|$|\?)/i.test(url || "");
 	}
 
 	function isNewTab(url) {
@@ -75,14 +70,6 @@
 	}
 
 	async function openStage(fromTabId, fromUrl) {
-		if (fromTabId != null && isNewTab(fromUrl) && !/^chrome:\/\/(extensions|settings|history|downloads)/i.test(fromUrl || "")) {
-			try {
-				const updated = await chrome.tabs.update(fromTabId, { url: STAGE, active: true });
-				return updated;
-			} catch {
-				/* fall through and create */
-			}
-		}
 		const existing = await chrome.tabs.query({ url: STAGE + "*" });
 		if (existing[0]?.id != null) {
 			return await chrome.tabs.update(existing[0].id, { active: true });
@@ -144,38 +131,10 @@
 			return { ok: true, panel: true, error: "That tab is gone." };
 		}
 
-		const url = tab.url || tab.pendingUrl || "";
-		if (restricted(url)) {
-			if (!message || message.action !== "show" || isExtensionsManager(url)) {
-				return { ok: true, panel: true };
-			}
-			let stage;
-			try {
-				stage = await openStage(tabId, url);
-			} catch (error) {
-				return {
-					ok: true,
-					panel: true,
-					error: error instanceof Error ? error.message : "Could not open the local stage page."
-				};
-			}
-			const stageId = stage && stage.id;
-			if (stageId == null) return { ok: true, panel: true, deferred: true };
-			await waitComplete(stageId, 8000);
-			try {
-				await inject(stageId);
-				const payload = { type: "AVATAR", ...message };
-				const response = await chrome.tabs.sendMessage(stageId, payload);
-				return { ...(response || { ok: true }), tabId: stageId, panel: true };
-			} catch (error) {
-				return {
-					ok: true,
-					panel: true,
-					deferred: true,
-					tabId: stageId,
-					error: error instanceof Error ? error.message : "Stage tab opened; reload it once if she is missing."
-				};
-			}
+		const url = tab.url || "";
+		const pending = tab.pendingUrl || "";
+		if (restricted(url) || restricted(pending)) {
+			return { ok: true, panel: true };
 		}
 
 		const payload = { type: "AVATAR", ...message };
