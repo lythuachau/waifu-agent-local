@@ -990,9 +990,13 @@ async def ollama_chat(payload: dict) -> JSONResponse:
     headers = {"Content-Type": "application/json"}
     if LLM_KEY:
         headers["Authorization"] = f"Bearer {LLM_KEY}"
+    send = dict(payload)
+    send.pop("tools", None)
+    send.pop("tool_choice", None)
+    send.pop("parallel_tool_calls", None)
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
-            r = await client.post(f"{LLM_BASE}/chat/completions", json=payload, headers=headers)
+            r = await client.post(f"{LLM_BASE}/chat/completions", json=send, headers=headers)
     except httpx.RequestError as e:
         return JSONResponse(
             {"error": {"message": f"local LLM unreachable at {LLM_BASE}: {e}"}},
