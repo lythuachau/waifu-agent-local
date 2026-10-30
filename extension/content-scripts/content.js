@@ -1869,6 +1869,41 @@
 			pixels_right
 		};
 	}
+	function antiCopyCanvases() {
+		const nodes = [...document.querySelectorAll("canvas")];
+		const hit = [];
+		for (const c of nodes) {
+			const r = c.getBoundingClientRect();
+			if (r.width < 80 || r.height < 36) continue;
+			if (r.bottom < 0 || r.top > window.innerHeight) continue;
+			hit.push(c);
+		}
+		const paper = document.querySelector("[data-reading-content-type], .novel-reader__paper, article");
+		const paperText = (paper?.innerText || "").replace(/\s+/g, " ").trim();
+		const named = hit.filter((c) => /novel-reader__canvas|reader__canvas/i.test(c.className || ""));
+		if (named.length) return named;
+		if (hit.length >= 2 && (paperText.length < 240 || /đang mở|đang tải|loading/i.test(paperText))) return hit;
+		return [];
+	}
+	async function ocrAntiCopyCanvases() {
+		const canvases = antiCopyCanvases().slice(0, 10);
+		if (!canvases.length || !chrome?.runtime?.sendMessage) return "";
+		const parts = [];
+		for (const c of canvases) {
+			let dataUrl = "";
+			try {
+				dataUrl = c.toDataURL("image/png");
+			} catch {
+				continue;
+			}
+			if (!dataUrl || dataUrl.length < 80) continue;
+			const resp = await new Promise((resolve) => {
+				chrome.runtime.sendMessage({ type: "ZW_OCR", image: dataUrl }, (r) => resolve(r || null));
+			});
+			if (resp?.text) parts.push(String(resp.text).trim());
+		}
+		return parts.filter(Boolean).join("\n");
+	}
 	//#endregion
 	//#region ../page-controller/src/patches/react.ts
 	function patchReact(pageController) {
@@ -2896,7 +2931,13 @@ gl_Position = vec4(aPosition, 0.0, 1.0);
 			const pi = getPageInfo();
 			const viewportExpansion = resolveViewportExpansion(this.config.viewportExpansion);
 			await this.updateTree();
-			const content = this.simplifiedHTML;
+			let content = this.simplifiedHTML;
+			try {
+				const ocr = await ocrAntiCopyCanvases();
+				if (ocr) content = `${content}\n\n[Anti-copy canvas OCR]\n${ocr}`;
+			} catch (error) {
+				console.warn("[page] anti-copy OCR", error);
+			}
 			return {
 				url,
 				title,

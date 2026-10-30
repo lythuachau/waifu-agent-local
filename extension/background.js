@@ -218,6 +218,20 @@ var background = (function() {
 					sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) });
 				});
 				return true;
+			} else if (message.type === "ZW_OCR") {
+				const image = String(message.image || "");
+				if (!image.startsWith("data:image/")) {
+					sendResponse({ ok: false, text: "", error: "bad image" });
+					return;
+				}
+				fetch("http://127.0.0.1:8787/api/v1/local/ocr", {
+					method: "POST",
+					headers: { "Content-Type": "application/json", "X-ZW-Api-Key": "local" },
+					body: JSON.stringify({ image })
+				}).then(async (r) => sendResponse(await r.json())).catch((error) => {
+					sendResponse({ ok: false, text: "", error: error instanceof Error ? error.message : String(error) });
+				});
+				return true;
 			} else if (message.type === "AVATAR_EVENT") {
 				return;
 			} else {

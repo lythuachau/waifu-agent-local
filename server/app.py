@@ -1661,6 +1661,21 @@ def local_codex_logout():
     return codex_llm.logout()
 
 
+@app.post("/api/v1/local/ocr")
+async def local_ocr(body: dict | None = None):
+    img = str((body or {}).get("image") or "")
+    if not img:
+        return {"ok": False, "text": ""}
+    if not vision_ocr.available():
+        return {"ok": False, "text": "", "error": "RapidOCR models missing"}
+    try:
+        text = await asyncio.to_thread(vision_ocr.extract_text_data_url, img)
+        return {"ok": True, "text": text}
+    except Exception as e:
+        log.warning("local ocr failed: %s", e)
+        return {"ok": False, "text": "", "error": str(e)[:200]}
+
+
 @app.get("/api/v1/local/catalog")
 async def local_catalog():
     rec = load_settings()

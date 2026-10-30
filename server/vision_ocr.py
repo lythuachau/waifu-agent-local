@@ -83,3 +83,14 @@ def describe_data_url(url: str) -> str:
         payload = payload.split(",", 1)[1]
     raw = base64.b64decode(payload)
     return describe_bytes(raw)
+
+
+def extract_text_data_url(url: str) -> str:
+    payload = url
+    if payload.startswith("data:") and "," in payload:
+        payload = payload.split(",", 1)[1]
+    raw = base64.b64decode(payload)
+    img = _decode_image(raw)
+    result = get_engine()(img)
+    txts = [str(t).strip() for t in (getattr(result, "txts", None) or []) if str(t).strip()]
+    return "\n".join(txts[:400])
