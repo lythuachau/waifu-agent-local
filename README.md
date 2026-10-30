@@ -69,7 +69,7 @@ Pick the LLM and voice at `http://127.0.0.1:8787/settings` (Ollama vs Codex, mod
 ## 3. Load the extension
 
 1. Chrome → `chrome://extensions` → Developer mode → **Load unpacked**
-2. Pick `E:\ll\waifu-agent-extract\self-host\extension` (manifest `1.0.4.11`)
+2. Pick `E:\ll\waifu-agent-extract\self-host\extension` (manifest `1.0.4.18`)
 3. Reload unpacked after each renderer patch
 4. Open `http://127.0.0.1:8787/stage` (not `chrome://`). Side panel no longer asks for an API key; it uses `local` against this host.
 5. Advanced LLM: **Ollama local** (default) or **ChatGPT (Codex trên máy này)**. Paid OpenAI / Anthropic / Typesafe Jev key fields are removed.

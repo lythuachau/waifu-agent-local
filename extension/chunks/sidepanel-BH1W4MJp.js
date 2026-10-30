@@ -28272,11 +28272,89 @@ function localOptionList(items) {
 		};
 	}).filter((x) => x.id);
 }
-function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, previewMsg, onPreview }) {
+function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, previewMsg, onPreview, onCatalog }) {
 	const set = (key) => (e) => onChange({
 		...rec,
 		[key]: e.target.value
 	});
+	const [codexBusy, setCodexBusy] = (0, import_react.useState)(false);
+	const [codexMsg, setCodexMsg] = (0, import_react.useState)("");
+	const [loginBox, setLoginBox] = (0, import_react.useState)(null);
+	(0, import_react.useEffect)(() => {
+		if (!loginBox || loginBox.done) return;
+		let stop = false;
+		const timer = setInterval(async () => {
+			if (stop) return;
+			try {
+				const r = await fetch(`${ZEROWEIGHT_API}/local/codex/login/poll`, { method: "POST" });
+				const d = await r.json();
+				if (d.ok) {
+					stop = true;
+					setLoginBox(null);
+					setCodexMsg("Đăng nhập Codex thành công.");
+					onCatalog && onCatalog();
+				} else if (d.error && !d.pending) {
+					stop = true;
+					setLoginBox(null);
+					setCodexMsg(String(d.error));
+				}
+			} catch {
+			}
+		}, 2500);
+		return () => {
+			stop = true;
+			clearInterval(timer);
+		};
+	}, [loginBox]);
+	const pingCodex = async () => {
+		setCodexBusy(true);
+		setCodexMsg("");
+		try {
+			const r = await fetch(`${ZEROWEIGHT_API}/local/codex/ping`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ model: rec.codex_model })
+			});
+			const d = await r.json();
+			setCodexMsg(d.ok ? `Codex trả lời ${d.ms} ms · ${d.reply || "pong"}` : `Codex lỗi: ${d.error || r.status}`);
+			onCatalog && onCatalog();
+		} catch (error) {
+			setCodexMsg(String(error.message || error));
+		} finally {
+			setCodexBusy(false);
+		}
+	};
+	const startCodexLogin = async () => {
+		setCodexBusy(true);
+		setCodexMsg("");
+		try {
+			const r = await fetch(`${ZEROWEIGHT_API}/local/codex/login/start`, { method: "POST" });
+			const d = await r.json();
+			if (!d.ok) {
+				setCodexMsg(String(d.error || "Không xin được mã đăng nhập."));
+				return;
+			}
+			setLoginBox(d);
+			setCodexMsg("Mở link ChatGPT, nhập mã, rồi đợi xác nhận.");
+		} catch (error) {
+			setCodexMsg(String(error.message || error));
+		} finally {
+			setCodexBusy(false);
+		}
+	};
+	const logoutCodex = async () => {
+		setCodexBusy(true);
+		try {
+			await fetch(`${ZEROWEIGHT_API}/local/codex/logout`, { method: "POST" });
+			setLoginBox(null);
+			setCodexMsg("Đã đăng xuất Codex trên máy này.");
+			onCatalog && onCatalog();
+		} catch (error) {
+			setCodexMsg(String(error.message || error));
+		} finally {
+			setCodexBusy(false);
+		}
+	};
 	if (!catalog) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 		className: "text-[11px] text-muted-foreground",
 		children: "Đang tải Não / Giọng từ API local…"
@@ -28298,9 +28376,82 @@ function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, pr
 			title: "Não",
 			info: "Codex + Ollama dự phòng. Jev cùng backend. Vision mặc định RapidOCR (nhẹ).",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-[10px] text-muted-foreground leading-relaxed",
-					children: `${ollama.length ? `Ollama ${ollama.length} model` : "Ollama không thấy model"}${cstat.logged_in ? " · Codex đã login" : " · Codex chưa login"}`
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "rounded-md border border-input bg-input/30 p-2.5 flex flex-col gap-2",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-center gap-2",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: `size-2.5 rounded-full shrink-0 ${cstat.state === "ok" || cstat.state === "logged_in" ? "bg-emerald-500" : cstat.state === "stale" ? "bg-amber-400" : "bg-destructive"}`
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-xs font-medium",
+									children: cstat.label || (cstat.logged_in ? "Codex đã login" : "Codex chưa login")
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-[10px] text-muted-foreground leading-relaxed",
+							children: [
+								cstat.plan ? `ChatGPT ${cstat.plan}` : "",
+								cstat.email ? ` · ${cstat.email}` : "",
+								cstat.last_ping && cstat.last_ping.ok ? ` · lần kiểm tra ${cstat.last_ping.ms} ms` : "",
+								ollama.length ? ` · Ollama ${ollama.length} model` : " · Ollama không thấy model"
+							].filter(Boolean).join("") || "Chưa có phiên Codex trên máy này."
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex flex-wrap gap-2",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									disabled: codexBusy || !cstat.logged_in,
+									onClick: pingCodex,
+									className: "h-7 px-2 text-[11px] rounded-md border border-input bg-background cursor-pointer disabled:opacity-50",
+									children: codexBusy ? "Đang kiểm tra…" : "Kiểm tra Codex"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									disabled: codexBusy,
+									onClick: startCodexLogin,
+									className: "h-7 px-2 text-[11px] rounded-md border border-input bg-background cursor-pointer disabled:opacity-50",
+									children: cstat.logged_in ? "Đăng nhập lại" : "Đăng nhập Codex"
+								}),
+								cstat.logged_in && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									disabled: codexBusy,
+									onClick: logoutCodex,
+									className: "h-7 px-2 text-[11px] rounded-md border border-input bg-background cursor-pointer disabled:opacity-50",
+									children: "Đăng xuất"
+								})
+							]
+						}),
+						loginBox && loginBox.user_code && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "text-[11px] leading-relaxed space-y-1",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Máy mới: mở link ChatGPT, nhập mã (15 phút)." }),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+									href: loginBox.verification_url,
+									target: "_blank",
+									rel: "noreferrer",
+									className: "text-primary underline break-all",
+									children: loginBox.verification_url
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "font-mono text-base tracking-[0.25em] font-semibold",
+									children: loginBox.user_code
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "text-muted-foreground",
+									children: "Bật Device code authorization trong ChatGPT → Settings → Security nếu mã không hiện."
+								})
+							]
+						}),
+						codexMsg && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-[11px] leading-relaxed",
+							children: codexMsg
+						})
+					]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
 					label: "Backend",
@@ -28612,26 +28763,36 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 	const [localRec, setLocalRec] = (0, import_react.useState)({});
 	const [previewBusy, setPreviewBusy] = (0, import_react.useState)(false);
 	const [previewMsg, setPreviewMsg] = (0, import_react.useState)("");
+	const applyCatalog = (c, keepRec) => {
+		setCatalog(c);
+		if (keepRec) return;
+		const s = c.settings || {};
+		const persona = (c.personas || []).find((p) => p.avatar_id === (config?.avatarId ?? ""));
+		setLocalRec({
+			llm_backend: s.llm_backend || "codex",
+			ollama_model: s.ollama_model || "llama3.2",
+			codex_model: s.codex_model || "",
+			vision_model: s.vision_model || "ocr",
+			default_engine: s.default_engine || "auto",
+			default_edge: s.default_edge || "",
+			tts_gateway: s.tts_gateway || "local",
+			avatar_edge: persona?.edge || s.default_edge || ""
+		});
+	};
+	const reloadCatalog = (keepRec) => fetch(`${ZEROWEIGHT_API}/local/catalog`).then((r) => {
+		if (!r.ok) throw new Error(`catalog ${r.status}`);
+		return r.json();
+	}).then((c) => applyCatalog(c, keepRec)).catch((error) => {
+		console.error("[ConfigPanel] catalog", error);
+		setCatalog({ error: String(error.message || error) });
+	});
 	(0, import_react.useEffect)(() => {
 		let cancelled = false;
 		fetch(`${ZEROWEIGHT_API}/local/catalog`).then((r) => {
 			if (!r.ok) throw new Error(`catalog ${r.status}`);
 			return r.json();
 		}).then((c) => {
-			if (cancelled) return;
-			setCatalog(c);
-			const s = c.settings || {};
-			const persona = (c.personas || []).find((p) => p.avatar_id === (config?.avatarId ?? ""));
-			setLocalRec({
-				llm_backend: s.llm_backend || "codex",
-				ollama_model: s.ollama_model || "llama3.2",
-				codex_model: s.codex_model || "",
-				vision_model: s.vision_model || "ocr",
-				default_engine: s.default_engine || "auto",
-				default_edge: s.default_edge || "",
-				tts_gateway: s.tts_gateway || "local",
-				avatar_edge: persona?.edge || s.default_edge || ""
-			});
+			if (!cancelled) applyCatalog(c, false);
 		}).catch((error) => {
 			console.error("[ConfigPanel] catalog", error);
 			if (!cancelled) setCatalog({ error: String(error.message || error) });
@@ -28812,7 +28973,8 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 				avatarId,
 				previewBusy,
 				previewMsg,
-				onPreview: previewVoice
+				onPreview: previewVoice,
+				onCatalog: () => reloadCatalog(true)
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
 				label: "Response language",

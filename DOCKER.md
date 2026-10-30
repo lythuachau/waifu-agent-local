@@ -8,7 +8,7 @@ Không đưa `zw_key.txt` vào image.
 
 1. Cài [Docker Desktop](https://www.docker.com/products/docker-desktop/) (WSL2) và Git.
 2. Clone repo private, copy `.zai` (Drive `waifu-agent-runtime/zai` hoặc USB) vào `server/static/zai`.
-3. (Tuỳ chọn) `codex login` trên Windows — file `%USERPROFILE%\.codex\auth.json` được mount vào container.
+3. Codex: trong side panel → Cài đặt → Não → **Đăng nhập Codex** (mã trên https://auth.openai.com/codex/device), hoặc `codex login` trên Windows. File `%USERPROFILE%\.codex\auth.json` được mount vào container.
 4. Chạy:
 
 ```powershell

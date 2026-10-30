@@ -1630,6 +1630,28 @@ def persona_rows() -> list[dict]:
     return rows
 
 
+@app.post("/api/v1/local/codex/ping")
+async def local_codex_ping(body: dict | None = None):
+    rec = load_settings()
+    model = ((body or {}).get("model") or rec.get("codex_model") or "gpt-6-luna")
+    return await codex_llm.ping(model)
+
+
+@app.post("/api/v1/local/codex/login/start")
+async def local_codex_login_start():
+    return await codex_llm.login_start()
+
+
+@app.post("/api/v1/local/codex/login/poll")
+async def local_codex_login_poll():
+    return await codex_llm.login_poll()
+
+
+@app.post("/api/v1/local/codex/logout")
+def local_codex_logout():
+    return codex_llm.logout()
+
+
 @app.get("/api/v1/local/catalog")
 async def local_catalog():
     rec = load_settings()

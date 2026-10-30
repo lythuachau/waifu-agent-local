@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -23,9 +24,22 @@ MODELS_CACHE = Path.home() / ".codex" / "models_cache.json"
 # client-metadata URL. Refresh with the URL as client_id returns 401.
 CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 TOKEN_URL = "https://auth.openai.com/oauth/token"
+ISSUER = "https://auth.openai.com"
+DEVICE_API = f"{ISSUER}/api/accounts"
+DEVICE_PAGE = f"{ISSUER}/codex/device"
+DEVICE_CALLBACK = f"{ISSUER}/deviceauth/callback"
 RESPONSES_URL = "https://chatgpt.com/backend-api/codex/responses"
 DEFAULT_MODEL = "gpt-6-luna"
 REFRESH_SKEW_SEC = 60
+_AUTH_HEADERS = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "originator": "codex_cli_rs",
+}
+
+_login_lock = threading.Lock()
+_login_pending: dict | None = None
+_last_ping: dict | None = None
 
 
 def _read_auth() -> dict:
@@ -42,15 +56,69 @@ def logged_in() -> bool:
     return bool(tokens.get("access_token"))
 
 
+def _jwt_claims(token: str) -> dict:
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        data = json.loads(base64.urlsafe_b64decode(payload.encode("ascii")))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _mask_email(email: str) -> str:
+    email = (email or "").strip()
+    if "@" not in email:
+        return ""
+    local, _, domain = email.partition("@")
+    if len(local) <= 1:
+        return f"*@{domain}"
+    return f"{local[0]}***@{domain}"
+
+
 def status() -> dict:
     auth = _read_auth()
     tokens = auth.get("tokens") or {}
+    access = tokens.get("access_token") or ""
+    claims = _jwt_claims(tokens.get("id_token") or "")
+    extra = claims.get("https://api.openai.com/auth") or {}
+    if not isinstance(extra, dict):
+        extra = {}
+    exp = _jwt_exp(access)
+    remaining = int(exp - time.time()) if exp else None
+    fresh = _access_fresh(tokens) if access else False
+    logged = bool(access)
+    ping = dict(_last_ping) if _last_ping else None
+    pending = False
+    with _login_lock:
+        pending = bool(_login_pending)
+    if logged and ping and ping.get("ok"):
+        label = "Codex đang hoạt động"
+        state = "ok"
+    elif logged and not fresh:
+        label = "Codex token hết hạn — đăng nhập lại"
+        state = "stale"
+    elif logged:
+        label = "Codex đã login (chưa kiểm tra)"
+        state = "logged_in"
+    else:
+        label = "Codex chưa login"
+        state = "logged_out"
     return {
-        "logged_in": bool(tokens.get("access_token")),
+        "logged_in": logged,
+        "ready": bool(logged and fresh),
+        "state": state,
+        "label": label,
         "auth_mode": auth.get("auth_mode") or "",
         "has_account": bool(tokens.get("account_id")),
+        "plan": str(extra.get("chatgpt_plan_type") or ""),
+        "email": _mask_email(str(claims.get("email") or "")),
+        "token_fresh": fresh,
+        "expires_in_sec": remaining if remaining and remaining > 0 else 0,
         "default_model": DEFAULT_MODEL,
         "models": list_model_ids(),
+        "last_ping": ping,
+        "login_pending": pending,
     }
 
 
@@ -79,9 +147,7 @@ def list_models_openai() -> dict:
 
 def _jwt_exp(access: str) -> int | None:
     try:
-        payload = access.split(".")[1]
-        payload += "=" * (-len(payload) % 4)
-        data = json.loads(base64.urlsafe_b64decode(payload.encode("ascii")))
+        data = _jwt_claims(access)
         return int(data.get("exp") or 0) or None
     except Exception:
         return None
@@ -306,3 +372,199 @@ async def chat_completions(body: dict) -> dict:
         model = DEFAULT_MODEL
     text = await complete(body.get("messages") or [], model)
     return as_chat_completion(text, model)
+
+
+async def ping(model: str | None = None) -> dict:
+    global _last_ping
+    model = model or DEFAULT_MODEL
+    if model in ("zeroweight", "llama3.2", ""):
+        model = DEFAULT_MODEL
+    t0 = time.perf_counter()
+    if not logged_in():
+        rec = {
+            "ok": False,
+            "error": "Chưa login Codex.",
+            "ms": 0,
+            "model": model,
+            "reply": "",
+        }
+        _last_ping = rec
+        return rec
+    try:
+        text = await complete(
+            [{"role": "user", "content": "Reply with the single word pong."}],
+            model,
+        )
+        rec = {
+            "ok": True,
+            "error": "",
+            "ms": int((time.perf_counter() - t0) * 1000),
+            "model": model,
+            "reply": (text or "")[:80],
+        }
+    except Exception as e:
+        rec = {
+            "ok": False,
+            "error": str(e)[:300],
+            "ms": int((time.perf_counter() - t0) * 1000),
+            "model": model,
+            "reply": "",
+        }
+        log.warning("codex ping failed: %s", rec["error"])
+    _last_ping = rec
+    return rec
+
+
+def _account_id_from_id_token(id_token: str) -> str:
+    claims = _jwt_claims(id_token)
+    extra = claims.get("https://api.openai.com/auth") or {}
+    if isinstance(extra, dict) and extra.get("chatgpt_account_id"):
+        return str(extra["chatgpt_account_id"])
+    return ""
+
+
+def _persist_tokens(access: str, refresh: str, id_token: str, account_id: str = "") -> None:
+    AUTH_PATH.parent.mkdir(parents=True, exist_ok=True)
+    auth = _read_auth()
+    tokens = dict(auth.get("tokens") or {})
+    tokens["access_token"] = access
+    if refresh:
+        tokens["refresh_token"] = refresh
+    if id_token:
+        tokens["id_token"] = id_token
+    tokens["account_id"] = account_id or _account_id_from_id_token(id_token) or tokens.get("account_id") or ""
+    auth["tokens"] = tokens
+    auth["auth_mode"] = "chatgpt"
+    auth["last_refresh"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+    AUTH_PATH.write_text(json.dumps(auth, indent=2), encoding="utf-8")
+
+
+def logout() -> dict:
+    global _last_ping, _login_pending
+    auth = _read_auth()
+    auth["tokens"] = {}
+    auth["auth_mode"] = ""
+    try:
+        AUTH_PATH.parent.mkdir(parents=True, exist_ok=True)
+        AUTH_PATH.write_text(json.dumps(auth, indent=2), encoding="utf-8")
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+    _last_ping = None
+    with _login_lock:
+        _login_pending = None
+    return {"ok": True, **status()}
+
+
+async def login_start() -> dict:
+    global _login_pending
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(
+            f"{DEVICE_API}/deviceauth/usercode",
+            headers=_AUTH_HEADERS,
+            json={"client_id": CLIENT_ID},
+        )
+    if r.status_code == 404:
+        return {
+            "ok": False,
+            "error": "Device code chưa bật. ChatGPT → Settings → Security → Device code authorization.",
+        }
+    if r.status_code >= 400:
+        return {"ok": False, "error": f"Không xin được mã login ({r.status_code})."}
+    try:
+        body = r.json()
+    except Exception:
+        return {"ok": False, "error": "Phản hồi login không đọc được."}
+    user_code = body.get("user_code") or body.get("usercode") or ""
+    device_auth_id = body.get("device_auth_id") or ""
+    interval = body.get("interval") or 5
+    try:
+        interval = int(interval)
+    except Exception:
+        interval = 5
+    if not user_code or not device_auth_id:
+        return {"ok": False, "error": "Server không trả mã thiết bị."}
+    rec = {
+        "device_auth_id": device_auth_id,
+        "user_code": user_code,
+        "interval": max(2, interval),
+        "started": time.time(),
+    }
+    with _login_lock:
+        _login_pending = rec
+    return {
+        "ok": True,
+        "pending": True,
+        "user_code": user_code,
+        "verification_url": DEVICE_PAGE,
+        "expires_in": 15 * 60,
+        "interval": rec["interval"],
+    }
+
+
+async def login_poll() -> dict:
+    global _login_pending, _last_ping
+    with _login_lock:
+        pending = dict(_login_pending) if _login_pending else None
+    if not pending:
+        return {"ok": False, "pending": False, "error": "Chưa bấm Đăng nhập Codex."}
+    if time.time() - pending["started"] > 15 * 60:
+        with _login_lock:
+            _login_pending = None
+        return {"ok": False, "pending": False, "error": "Mã hết hạn (15 phút). Bấm Đăng nhập lại."}
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(
+            f"{DEVICE_API}/deviceauth/token",
+            headers=_AUTH_HEADERS,
+            json={
+                "device_auth_id": pending["device_auth_id"],
+                "user_code": pending["user_code"],
+            },
+        )
+    if r.status_code in (403, 404):
+        return {"ok": False, "pending": True, "user_code": pending["user_code"], "verification_url": DEVICE_PAGE}
+    if r.status_code >= 400:
+        return {"ok": False, "pending": False, "error": f"Login thất bại ({r.status_code})."}
+    try:
+        body = r.json()
+    except Exception:
+        return {"ok": False, "pending": True}
+    code = body.get("authorization_code") or ""
+    verifier = body.get("code_verifier") or ""
+    if not code or not verifier:
+        return {"ok": False, "pending": True}
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        tr = await client.post(
+            TOKEN_URL,
+            data={
+                "grant_type": "authorization_code",
+                "client_id": CLIENT_ID,
+                "code": code,
+                "code_verifier": verifier,
+                "redirect_uri": DEVICE_CALLBACK,
+            },
+            headers={"originator": "codex_cli_rs"},
+        )
+    if tr.status_code >= 400:
+        log.warning("codex device token exchange %s", tr.status_code)
+        return {"ok": False, "pending": False, "error": f"Đổi mã lấy token lỗi ({tr.status_code})."}
+    try:
+        tokens = tr.json()
+    except Exception:
+        return {"ok": False, "pending": False, "error": "Token không đọc được."}
+    access = tokens.get("access_token") or ""
+    if not access:
+        return {"ok": False, "pending": False, "error": "Không nhận được access_token."}
+    try:
+        _persist_tokens(
+            access,
+            tokens.get("refresh_token") or "",
+            tokens.get("id_token") or "",
+            str(tokens.get("account_id") or ""),
+        )
+    except Exception as e:
+        return {"ok": False, "pending": False, "error": f"Không ghi được auth.json: {e}"}
+    with _login_lock:
+        _login_pending = None
+    _last_ping = None
+    log.info("codex device login saved")
+    return {"ok": True, "pending": False, **status()}

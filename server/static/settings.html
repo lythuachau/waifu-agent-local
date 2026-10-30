@@ -61,8 +61,15 @@
   <p class="sub">Cùng form với Settings trong side panel extension. Có thể chỉnh ở đây khi debug.</p>
 
   <section class="card" id="ai">
-    <h2>Model AI</h2>
-    <p class="status" id="ai-status">Đang tải…</p>
+    <h2>Não</h2>
+    <div class="status" id="ai-status">Đang tải…</div>
+    <div class="actions" style="margin-top:0">
+      <button type="button" class="ghost" id="btn-codex-ping">Kiểm tra Codex</button>
+      <button type="button" class="ghost" id="btn-codex-login">Đăng nhập Codex</button>
+      <button type="button" class="ghost" id="btn-codex-logout">Đăng xuất</button>
+    </div>
+    <p class="hint" id="codex-login-box" hidden></p>
+    <p class="hint" id="codex-msg"></p>
     <div class="row">
       <div>
         <label for="llm_backend">Backend</label>
@@ -218,12 +225,96 @@ async function load() {
       : '<span>ZeroTTS đang nạp model (~900 MB lần đầu). Nghe thử tiếng Việt đợi xong.</span>');
   const c = catalog.codex || {};
   const ollamaN = (catalog.ollama_models || []).length;
+  const ping = c.last_ping || {};
+  const cls = (c.state === "ok" || c.state === "logged_in") ? "ok" : "bad";
   $("ai-status").innerHTML = [
-    ollamaN ? `<span class="ok">Ollama ${ollamaN} model</span>` : `<span class="bad">Ollama không thấy model</span>`,
-    c.logged_in ? `<span class="ok"> · Codex đã login</span>` : `<span class="bad"> · Codex chưa login</span>`,
+    `<span class="${cls}">${c.label || (c.logged_in ? "Codex đã login" : "Codex chưa login")}</span>`,
+    c.plan ? ` · ChatGPT ${c.plan}` : "",
+    c.email ? ` · ${c.email}` : "",
+    ping.ok ? ` · lần kiểm tra ${ping.ms} ms` : "",
+    ollamaN ? ` · <span class="ok">Ollama ${ollamaN} model</span>` : ` · <span class="bad">Ollama không thấy model</span>`,
   ].join("");
+  $("btn-codex-ping").disabled = !c.logged_in;
+  $("btn-codex-login").textContent = c.logged_in ? "Đăng nhập lại" : "Đăng nhập Codex";
   renderPersonas();
 }
+
+async function refreshCatalogKeepForm() {
+  const r = await fetch("/api/v1/local/catalog");
+  catalog = await r.json();
+  const c = catalog.codex || {};
+  const ping = c.last_ping || {};
+  const cls = (c.state === "ok" || c.state === "logged_in") ? "ok" : "bad";
+  const ollamaN = (catalog.ollama_models || []).length;
+  $("ai-status").innerHTML = [
+    `<span class="${cls}">${c.label || (c.logged_in ? "Codex đã login" : "Codex chưa login")}</span>`,
+    c.plan ? ` · ChatGPT ${c.plan}` : "",
+    c.email ? ` · ${c.email}` : "",
+    ping.ok ? ` · lần kiểm tra ${ping.ms} ms` : "",
+    ollamaN ? ` · <span class="ok">Ollama ${ollamaN} model</span>` : ` · <span class="bad">Ollama không thấy model</span>`,
+  ].join("");
+  $("btn-codex-ping").disabled = !c.logged_in;
+  $("btn-codex-login").textContent = c.logged_in ? "Đăng nhập lại" : "Đăng nhập Codex";
+  fillSelect($("codex_model"), (catalog.codex_models || []).map((id) => ({id, label: id})), $("codex_model").value);
+}
+
+let loginTimer = null;
+function stopLoginPoll() {
+  if (loginTimer) { clearInterval(loginTimer); loginTimer = null; }
+}
+
+$("btn-codex-ping").onclick = async () => {
+  $("codex-msg").textContent = "Đang gửi ping…";
+  const r = await fetch("/api/v1/local/codex/ping", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({model: $("codex_model").value}),
+  });
+  const d = await r.json();
+  $("codex-msg").innerHTML = d.ok
+    ? `<span class="ok">Codex trả lời ${d.ms} ms · ${d.reply || "pong"}</span>`
+    : `<span class="bad">Codex lỗi: ${d.error || r.status}</span>`;
+  await refreshCatalogKeepForm();
+};
+
+$("btn-codex-login").onclick = async () => {
+  stopLoginPoll();
+  $("codex-msg").textContent = "Đang xin mã…";
+  const r = await fetch("/api/v1/local/codex/login/start", {method: "POST"});
+  const d = await r.json();
+  if (!d.ok) {
+    $("codex-login-box").hidden = true;
+    $("codex-msg").innerHTML = `<span class="bad">${d.error || "Không xin được mã"}</span>`;
+    return;
+  }
+  $("codex-login-box").hidden = false;
+  $("codex-login-box").innerHTML =
+    `Máy mới: mở <a href="${d.verification_url}" target="_blank" rel="noreferrer">${d.verification_url}</a>` +
+    ` rồi nhập mã <strong style="font-size:18px;letter-spacing:.2em">${d.user_code}</strong> (15 phút).` +
+    ` Bật Device code authorization trong ChatGPT → Settings → Security nếu lỗi.`;
+  $("codex-msg").textContent = "Đang chờ xác nhận trên ChatGPT…";
+  loginTimer = setInterval(async () => {
+    const p = await fetch("/api/v1/local/codex/login/poll", {method: "POST"});
+    const j = await p.json();
+    if (j.ok) {
+      stopLoginPoll();
+      $("codex-login-box").hidden = true;
+      $("codex-msg").innerHTML = '<span class="ok">Đăng nhập Codex thành công.</span>';
+      await load();
+    } else if (j.error && !j.pending) {
+      stopLoginPoll();
+      $("codex-msg").innerHTML = `<span class="bad">${j.error}</span>`;
+    }
+  }, 2500);
+};
+
+$("btn-codex-logout").onclick = async () => {
+  stopLoginPoll();
+  await fetch("/api/v1/local/codex/logout", {method: "POST"});
+  $("codex-login-box").hidden = true;
+  $("codex-msg").textContent = "Đã đăng xuất Codex.";
+  await load();
+};
 
 function payload() {
   const voice_map = {};
