@@ -23606,6 +23606,12 @@ function messageOf(error) {
 //#endregion
 //#region src/character/voice/playback.ts
 var CHUNK_TIMEOUT_MS = 18e4;
+/** Next-chapter TTS starts when this much audio remains (long chapters). */
+var PREFETCH_REMAIN_S = 10;
+/** Do not change the tab mid-speech when the chapter is shorter than this. */
+var PREFETCH_MIN_DUR_S = 20;
+/** Tail too small to hide infer: wait for onended, then navigate. */
+var PREFETCH_SKIP_TAIL_S = 1.5;
 /** Slack past a buffer's duration before the watchdog ends it */
 var WATCHDOG_SLACK_MS = 3e3;
 /** How long to wait for a suspended AudioContext to resume */
@@ -23648,8 +23654,10 @@ var Playback = class {
 	#synthesising = Promise.resolve();
 	#idle = null;
 	#playEnd = 0;
+	#playStart = 0;
 	#ttsArmed = false;
 	#ttsComplete = false;
+	#synthLock = 0;
 	constructor(urls, voice, events) {
 		this.urls = urls;
 		this.voice = voice;
@@ -23661,6 +23669,22 @@ var Playback = class {
 	}
 	get speaking() {
 		return this.#draining;
+	}
+	/** Seconds of audio still scheduled. Infinity until this utterance has been fully queued. */
+	remaining() {
+		if (!this.#draining) return 0;
+		if (!this.#ttsArmed || !this.#ttsComplete) return Infinity;
+		const ctx = this.#context;
+		if (!ctx) return 0;
+		return Math.max(0, this.#playEnd - ctx.currentTime);
+	}
+	/** Length of the current utterance once TTS has queued it. */
+	scheduledDuration() {
+		if (!(this.#playEnd > this.#playStart)) return 0;
+		return this.#playEnd - this.#playStart;
+	}
+	estimateInferSec(text) {
+		return estimateSpeechSec(text) * Math.max(0.15, this.#rtf);
 	}
 	/** Resolves when remaining scheduled audio is <= sec. Waits until TTS has fully queued. */
 	waitUntilRemaining(sec) {
@@ -23680,6 +23704,28 @@ var Playback = class {
 			tick();
 		});
 	}
+	/**
+	 * Prefetch window: ~10s remaining on long chapters; almost-ended on short ones
+	 * so the tab does not jump while a short chapter is still speaking.
+	 */
+	waitUntilNearEnd() {
+		const nonce = this.#nonce;
+		return new Promise((resolve) => {
+			const tick = () => {
+				if (this.#nonce !== nonce || !this.#draining) return resolve();
+				if (!this.#ttsArmed || !this.#ttsComplete) {
+					setTimeout(tick, 120);
+					return;
+				}
+				const left = this.remaining();
+				const dur = this.scheduledDuration();
+				const threshold = dur < PREFETCH_MIN_DUR_S ? 0.15 : Math.min(PREFETCH_REMAIN_S, Math.max(4, dur * 0.12));
+				if (left <= threshold) return resolve();
+				setTimeout(tick, 100);
+			};
+			tick();
+		});
+	}
 	/** Queue one message's chunks. `id` is reported by `onMessage` while it is spoken */
 	say(chunks, id) {
 		if (!chunks.length) return Promise.resolve();
@@ -23689,6 +23735,27 @@ var Playback = class {
 		});
 		this.#queue.push({
 			chunks,
+			id,
+			settle
+		});
+		if (!this.#draining) this.#drain();
+		return done;
+	}
+	/** Generate audio without playing it. Safe to call while a previous utterance is speaking. */
+	prepare(text) {
+		if (!text) return Promise.resolve(null);
+		return this.#synthesise(text);
+	}
+	/** Play a buffer already synthesised. Queued behind any current utterance. */
+	playPrepared(buffer, id) {
+		if (!buffer) return Promise.resolve();
+		let settle;
+		const done = new Promise((resolve) => {
+			settle = resolve;
+		});
+		this.#queue.push({
+			chunks: [],
+			buffer,
 			id,
 			settle
 		});
@@ -23716,6 +23783,7 @@ var Playback = class {
 		this.#ttsArmed = false;
 		this.#ttsComplete = false;
 		this.#playEnd = 0;
+		this.#playStart = 0;
 		this.events.onStopped();
 		this.events.onMessage(null);
 	}
@@ -23741,10 +23809,11 @@ var Playback = class {
 		this.#draining = true;
 		try {
 			while (this.#queue.length) {
-				const { chunks, id, settle } = this.#queue.shift();
+				const { chunks, id, settle, buffer } = this.#queue.shift();
 				this.events.onMessage(id ?? null);
 				try {
-					await this.#playMessage(chunks);
+					if (buffer) await this.#playOne(buffer, this.#nonce);
+					else await this.#playMessage(chunks);
 				} catch (error) {
 					this.events.onError(error instanceof Error ? error.message : String(error));
 				} finally {
@@ -23753,7 +23822,7 @@ var Playback = class {
 			}
 		} finally {
 			this.#draining = false;
-			this.#armIdleClose();
+			if (this.#synthLock === 0) this.#armIdleClose();
 			this.events.onMessage(null);
 		}
 	}
@@ -23788,7 +23857,7 @@ var Playback = class {
 		if (this.#idle) clearTimeout(this.#idle);
 		this.#idle = setTimeout(() => {
 			this.#idle = null;
-			if (!this.#draining) this.#closeSocket();
+			if (!this.#draining && this.#synthLock === 0) this.#closeSocket();
 		}, IDLE_CLOSE_MS);
 	}
 	async #connect() {
@@ -23856,11 +23925,12 @@ var Playback = class {
 			let tFirst = 0;
 			let T = speechSec;
 			let target = prerollFromRtf(T, this.#rtf);
+			let onMsg = null;
 			const finish = async (legacyFrames) => {
 				if (settled) return;
 				settled = true;
 				if (timer) clearTimeout(timer);
-				ws.onmessage = null;
+				if (ws.onmessage === onMsg) ws.onmessage = null;
 				if (legacyFrames && legacyFrames.length) {
 					try {
 						const bytes = concat(legacyFrames);
@@ -23891,6 +23961,7 @@ var Playback = class {
 				const now = context.currentTime;
 				if (!gotAudio) {
 					playHead = now + 0.04;
+					this.#playStart = playHead;
 					this.events.onAudio(true);
 					gotAudio = true;
 					this.#ttsArmed = true;
@@ -23926,7 +23997,7 @@ var Playback = class {
 				for (const buffer of pending) schedule(buffer);
 				pending = [];
 			};
-			ws.onmessage = (event) => {
+			onMsg = (event) => {
 				if (nonce !== this.#nonce) {
 					finish(null);
 					return;
@@ -23986,6 +24057,7 @@ var Playback = class {
 							if (meas > 0.05 && meas < 4) this.#rtf = this.#rtf * 0.55 + meas * 0.45;
 						}
 						beginPlayback();
+						if (ws.onmessage === onMsg) ws.onmessage = null;
 						this.#ttsComplete = true;
 						const waitPlayhead = () => {
 							if (nonce !== this.#nonce || settled) return finish(null);
@@ -24018,6 +24090,7 @@ var Playback = class {
 					finish(null);
 				}
 			};
+			ws.onmessage = onMsg;
 			try {
 				ws.send(JSON.stringify({
 					voice_id: voice.voiceId,
@@ -24031,6 +24104,12 @@ var Playback = class {
 		});
 	}
 	async #synthesiseNow(text) {
+		this.#synthLock++;
+		if (this.#idle) {
+			clearTimeout(this.#idle);
+			this.#idle = null;
+		}
+		try {
 		const ws = await this.#connect();
 		const context = this.#ensureContext();
 		if (!await this.#ensureRunning(context)) throw new Error("The browser blocked her voice: click in the side panel (or press Send) to allow sound.");
@@ -24104,6 +24183,10 @@ var Playback = class {
 			console.warn("[character/tts] decode failed", error);
 			return null;
 		}
+		} finally {
+			this.#synthLock = Math.max(0, this.#synthLock - 1);
+			if (this.#synthLock === 0 && !this.#draining) this.#armIdleClose();
+		}
 	}
 	/** A context created before any user gesture is suspended: it plays nothing, silently */
 	async #ensureRunning(context) {
@@ -24148,6 +24231,7 @@ var Playback = class {
 			this.events.onAudio(true);
 			this.#ttsArmed = true;
 			this.#ttsComplete = true;
+			this.#playStart = context.currentTime;
 			this.#playEnd = context.currentTime + buffer.duration;
 			watchdog = setTimeout(finish, Math.ceil(buffer.duration * 1e3) + WATCHDOG_SLACK_MS);
 		});
@@ -25050,6 +25134,24 @@ function useCharacter(settings, onVoiceMessage) {
 		}
 		const n = Math.min(50, Math.max(1, Number(count) || 5));
 		let pendingBody = "";
+		/** @type {{ index: number, buffer: Promise<AudioBuffer|null>, body: string } | null} */
+		let prepared = null;
+		const grabBody = async (tabId, prevHead, tries, delayMs) => {
+			for (let retry = 0; retry < tries; retry++) {
+				if (shouldStop?.()) return "";
+				if (retry) await new Promise((r) => setTimeout(r, delayMs));
+				try {
+					const state = await pageControl(tabId, "get_browser_state");
+					const nextBody = chapterFromContent(state?.content);
+					if (nextBody.length > 80 && (!prevHead || nextBody.slice(0, 120) !== prevHead)) return nextBody;
+				} catch {}
+			}
+			return "";
+		};
+		const openNext = async (tabId, next) => {
+			await chrome.tabs.update(tabId, { url: next });
+			await waitTabUrl(tabId, next);
+		};
 		for (let i = 0; i < n; i++) {
 			if (shouldStop?.()) break;
 			const [tab] = await chrome.tabs.query({
@@ -25062,55 +25164,92 @@ function useCharacter(settings, onVoiceMessage) {
 			}
 			let body = pendingBody;
 			pendingBody = "";
-			if (!body) {
-				for (let retry = 0; retry < 10; retry++) {
-					if (shouldStop?.()) break;
-					try {
-						const state = await pageControl(tab.id, "get_browser_state");
-						body = chapterFromContent(state?.content);
-						if (body.length > 80) break;
-					} catch {}
-					await new Promise((r) => setTimeout(r, 800));
-				}
-			}
+			if (prepared?.index === i && prepared.body) body = prepared.body;
+			if (!body) body = await grabBody(tab.id, "", 10, 800);
 			if (shouldStop?.()) break;
 			if (body.length < 80) {
 				setNotice(`Chưa lấy được chữ chương ${i + 1}. Reload tab truyện rồi thử lại.`);
 				break;
 			}
 			setNotice(`Đang đọc chương ${i + 1}/${n}`);
-			await playback.say(toChunks(body, new Set()), { text: `Chương ${i + 1}/${n}` });
-			if (i + 1 >= n || shouldStop?.()) break;
+			const id = { text: `Chương ${i + 1}/${n}` };
+			let playing;
+			if (prepared?.index === i) {
+				const buf = await prepared.buffer;
+				prepared = null;
+				if (shouldStop?.()) break;
+				playing = buf ? playback.playPrepared(buf, id) : playback.say(toChunks(body, new Set()), id);
+			} else {
+				playing = playback.say(toChunks(body, new Set()), id);
+			}
+			if (i + 1 >= n || shouldStop?.()) {
+				await playing;
+				break;
+			}
 			const next = nextChapterUrl(tab.url);
 			if (!next) {
+				await playing;
 				setNotice("Không tìm thấy chương tiếp (URL cần dạng /chapters/N).");
 				break;
 			}
+			await Promise.race([playing, playback.waitUntilNearEnd()]);
+			if (shouldStop?.()) {
+				await playing;
+				break;
+			}
+			const left = playback.remaining();
+			const dur = playback.scheduledDuration();
+			const skipPrefetch = dur < PREFETCH_MIN_DUR_S || left <= PREFETCH_SKIP_TAIL_S || !playback.speaking;
 			const prevHead = body.slice(0, 120);
-			await chrome.tabs.update(tab.id, { url: next });
+			if (skipPrefetch) {
+				await playing;
+				if (shouldStop?.()) break;
+				try {
+					await openNext(tab.id, next);
+				} catch (error) {
+					setNotice(error instanceof Error ? error.message : "Không mở được chương tiếp.");
+					break;
+				}
+				pendingBody = await grabBody(tab.id, prevHead, 12, 700);
+				if (!pendingBody) {
+					setNotice(`Chưa lấy được chữ chương ${i + 2}. Dừng.`);
+					break;
+				}
+				continue;
+			}
+			setNotice(`Còn ~${Math.round(left)}s — chuẩn bị chương ${i + 2}/${n}`);
 			try {
-				await waitTabUrl(tab.id, next);
+				await openNext(tab.id, next);
 			} catch (error) {
+				await playing;
 				setNotice(error instanceof Error ? error.message : "Không mở được chương tiếp.");
 				break;
 			}
-			for (let retry = 0; retry < 12; retry++) {
-				if (shouldStop?.()) break;
-				await new Promise((r) => setTimeout(r, 700));
-				try {
-					const state = await pageControl(tab.id, "get_browser_state");
-					const nextBody = chapterFromContent(state?.content);
-					if (nextBody.length > 80 && nextBody.slice(0, 120) !== prevHead) {
-						pendingBody = nextBody;
-						break;
-					}
-				} catch {}
+			const nextBody = await grabBody(tab.id, prevHead, 12, 700);
+			if (shouldStop?.()) {
+				await playing;
+				break;
 			}
-			if (shouldStop?.()) break;
-			if (!pendingBody) {
+			if (!nextBody) {
+				await playing;
 				setNotice(`Chưa lấy được chữ chương ${i + 2}. Dừng.`);
 				break;
 			}
+			const stillLeft = playback.remaining();
+			const inferNeed = playback.estimateInferSec(nextBody);
+			if (stillLeft <= PREFETCH_SKIP_TAIL_S) {
+				pendingBody = nextBody;
+				await playing;
+				continue;
+			}
+			console.log(`[readChapters] prefetch ch${i + 2} left=${stillLeft.toFixed(1)}s dur=${dur.toFixed(1)}s infer~${inferNeed.toFixed(1)}s`);
+			prepared = {
+				index: i + 1,
+				buffer: playback.prepare(nextBody),
+				body: nextBody
+			};
+			if (stillLeft < inferNeed) setNotice(`Đang tạo TTS chương ${i + 2} (infer ~${Math.ceil(inferNeed)}s)...`);
+			await playing;
 		}
 		setNotice(null);
 	}, []);
@@ -63719,7 +63858,7 @@ function App() {
 								disabled: isRunning && !readingChapters,
 								className: "size-7 cursor-pointer",
 								"aria-label": readingChapters ? "Dừng đọc chương" : "Đọc nhiều chương liên tục",
-								title: readingChapters ? "Dừng đọc chương" : "Đọc N chương: hết tiếng mới sang chương sau",
+								title: readingChapters ? "Dừng đọc chương" : "Đọc N chương: ~10s cuối tạo TTS chương sau, hết tiếng mới nói tiếp",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BookOpen, { className: "size-3.5" })
 							}),
 							canSend && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupButton, {
