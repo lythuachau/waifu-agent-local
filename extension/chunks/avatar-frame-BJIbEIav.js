@@ -1,37 +1,5 @@
 import "./_virtual_wxt-html-plugins-BsPm7yBB.js";
 import { n as keepAvatarState } from "./avatarState-CXzhEWV1.js";
-if (!globalThis.__zwLocalApiFetch) {
-	globalThis.__zwLocalApiFetch = true;
-	const origFetch = globalThis.fetch.bind(globalThis);
-	const localApi = (url) => {
-		try {
-			const u = new URL(String(url), "http://127.0.0.1");
-			return (u.hostname === "127.0.0.1" || u.hostname === "localhost") && u.port === "8787";
-		} catch {
-			return false;
-		}
-	};
-	globalThis.fetch = async function(input, init) {
-		const url = typeof input === "string" ? input : input && input.url;
-		if (!url || !localApi(url)) return origFetch(input, init);
-		try {
-			return await origFetch(input, init);
-		} catch (directErr) {
-			if (!globalThis.chrome?.runtime?.sendMessage) throw directErr;
-			const resp = await new Promise((resolve, reject) => {
-				chrome.runtime.sendMessage({ type: "ZW_FETCH", url: String(url) }, (r) => {
-					if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-					else resolve(r);
-				});
-			});
-			if (!resp || resp.buffer == null) throw directErr;
-			return new Response(resp.buffer, {
-				status: resp.status || (resp.ok ? 200 : 502),
-				headers: { "Content-Type": resp.contentType || "application/octet-stream" }
-			});
-		}
-	};
-}
 //#region ../../node_modules/@zeroweight/renderer/dist/zeroweight-renderer.es.js
 var C;
 function N(g) {
