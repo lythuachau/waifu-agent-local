@@ -23618,6 +23618,34 @@ async function locateChapter(dump, url) {
 	console.log(`[readChapters] locate title=${JSON.stringify(loc.title).slice(0, 80)} chars=${sliced.length}`);
 	return sliced;
 }
+var CHAPTER_LOADING = /đang mở chương|đang tải|đang load|\bloading\b|vui lòng chờ/i;
+var MIN_CHAPTER_DUMP = 160;
+function isRipeChapterDump(text, prevHead) {
+	const s = collapseWs(text);
+	if (s.length < MIN_CHAPTER_DUMP) return false;
+	if (prevHead && s.slice(0, 120) === prevHead) return false;
+	if (CHAPTER_LOADING.test(s) && s.length < 1200) return false;
+	return true;
+}
+async function locateChapterRetry(dump, url, shouldStop, attempts = 3) {
+	let last = new Error("Não không ghim được mốc chương.");
+	for (let i = 0; i < attempts; i++) {
+		if (shouldStop?.()) {
+			const e = new Error("stopped");
+			e.stopped = true;
+			throw e;
+		}
+		try {
+			return await locateChapter(dump, url);
+		} catch (error) {
+			if (error?.stopped) throw error;
+			last = error instanceof Error ? error : new Error(String(error));
+			console.warn(`[readChapters] locate try ${i + 1}/${attempts}:`, last.message);
+			if (i + 1 < attempts) await new Promise((r) => setTimeout(r, 900));
+		}
+	}
+	throw last;
+}
 function nextChapterUrl(url) {
 	try {
 		const u = new URL(url);
@@ -25276,6 +25304,7 @@ function useCharacter(settings, onVoiceMessage) {
 		}
 		const n = Math.min(50, Math.max(1, Number(count) || 5));
 		let pendingBody = "";
+		let keepNotice = false;
 		/** @type {{ index: number, buffer: Promise<AudioBuffer|null>, body: string } | null} */
 		let prepared = null;
 		const grabBody = async (tabId, prevHead, tries, delayMs) => {
@@ -25285,10 +25314,14 @@ function useCharacter(settings, onVoiceMessage) {
 				try {
 					const state = await pageControl(tabId, "get_browser_state");
 					const nextBody = chapterFromContent(state?.content);
-					if (nextBody.length > 80 && (!prevHead || nextBody.slice(0, 120) !== prevHead)) return nextBody;
+					if (isRipeChapterDump(nextBody, prevHead)) return nextBody;
 				} catch {}
 			}
 			return "";
+		};
+		const fail = (message) => {
+			keepNotice = true;
+			setNotice(message);
 		};
 		const openNext = async (tabId, next) => {
 			await chrome.tabs.update(tabId, { url: next });
@@ -25301,26 +25334,27 @@ function useCharacter(settings, onVoiceMessage) {
 				currentWindow: true
 			});
 			if (!tab?.id) {
-				setNotice("Không có tab đang mở.");
+				fail("Không có tab đang mở.");
 				break;
 			}
 			let body = pendingBody;
 			pendingBody = "";
 			if (prepared?.index === i && prepared.body) body = prepared.body;
-			if (!body) body = await grabBody(tab.id, "", 10, 800);
+			const alreadySliced = prepared?.index === i;
+			if (!body) body = await grabBody(tab.id, "", 16, 800);
 			if (shouldStop?.()) break;
-			if (body.length < 80) {
-				setNotice(`Chưa lấy được chữ chương ${i + 1}. Reload tab truyện rồi thử lại.`);
+			if (!alreadySliced && !isRipeChapterDump(body, "")) {
+				fail(`Chưa lấy được chữ chương ${i + 1}. Reload tab truyện rồi thử lại.`);
 				break;
 			}
-			const alreadySliced = prepared?.index === i;
 			let spoken = body;
 			if (!alreadySliced) {
 				setNotice(`Não đang ghim mốc chương ${i + 1}/${n}`);
 				try {
-					spoken = await locateChapter(body, tab.url);
+					spoken = await locateChapterRetry(body, tab.url, shouldStop);
 				} catch (error) {
-					setNotice(error instanceof Error ? error.message : "Não không ghim được mốc chương. Dừng.");
+					if (error?.stopped || shouldStop?.()) break;
+					fail(error instanceof Error ? error.message : "Não không ghim được mốc chương. Dừng.");
 					break;
 				}
 			}
@@ -25342,7 +25376,7 @@ function useCharacter(settings, onVoiceMessage) {
 			const next = nextChapterUrl(tab.url);
 			if (!next) {
 				await playing;
-				setNotice("Không tìm thấy chương tiếp (URL cần dạng /chapters/N).");
+				fail("Không tìm thấy chương tiếp (URL cần dạng /chapters/N).");
 				break;
 			}
 			await Promise.race([playing, playback.waitUntilNearEnd()]);
@@ -25360,17 +25394,17 @@ function useCharacter(settings, onVoiceMessage) {
 				try {
 					await openNext(tab.id, next);
 				} catch (error) {
-					setNotice(error instanceof Error ? error.message : "Không mở được chương tiếp.");
+					fail(error instanceof Error ? error.message : "Không mở được chương tiếp.");
 					break;
 				}
-				pendingBody = await grabBody(tab.id, prevHead, 12, 700);
+				pendingBody = await grabBody(tab.id, prevHead, 20, 800);
 				if (!pendingBody) {
-					setNotice(`Chưa lấy được chữ chương ${i + 2}. Dừng.`);
+					fail(`Chưa lấy được chữ chương ${i + 2} (dump chưa chín). Dừng.`);
 					break;
 				}
 				setNotice(`Não đang ghim mốc chương ${i + 2}/${n}`);
 				try {
-					const sliced = await locateChapter(pendingBody, next);
+					const sliced = await locateChapterRetry(pendingBody, next, shouldStop);
 					prepared = {
 						index: i + 1,
 						buffer: Promise.resolve(null),
@@ -25378,7 +25412,8 @@ function useCharacter(settings, onVoiceMessage) {
 					};
 					pendingBody = "";
 				} catch (error) {
-					setNotice(error instanceof Error ? error.message : "Não không ghim được mốc chương tiếp. Dừng.");
+					if (error?.stopped || shouldStop?.()) break;
+					fail(error instanceof Error ? error.message : "Não không ghim được mốc chương tiếp. Dừng.");
 					break;
 				}
 				continue;
@@ -25388,25 +25423,26 @@ function useCharacter(settings, onVoiceMessage) {
 				await openNext(tab.id, next);
 			} catch (error) {
 				await playing;
-				setNotice(error instanceof Error ? error.message : "Không mở được chương tiếp.");
+				fail(error instanceof Error ? error.message : "Không mở được chương tiếp.");
 				break;
 			}
-			const nextBody = await grabBody(tab.id, prevHead, 12, 700);
+			const nextBody = await grabBody(tab.id, prevHead, 20, 800);
 			if (shouldStop?.()) {
 				await playing;
 				break;
 			}
 			if (!nextBody) {
 				await playing;
-				setNotice(`Chưa lấy được chữ chương ${i + 2}. Dừng.`);
+				fail(`Chưa lấy được chữ chương ${i + 2} (dump chưa chín). Dừng.`);
 				break;
 			}
 			let slicedNext = "";
 			try {
-				slicedNext = await locateChapter(nextBody, next);
+				slicedNext = await locateChapterRetry(nextBody, next, shouldStop);
 			} catch (error) {
 				await playing;
-				setNotice(error instanceof Error ? error.message : "Não không ghim được mốc chương tiếp. Dừng.");
+				if (error?.stopped || shouldStop?.()) break;
+				fail(error instanceof Error ? error.message : "Não không ghim được mốc chương tiếp. Dừng.");
 				break;
 			}
 			const stillLeft = playback.remaining();
@@ -25429,7 +25465,7 @@ function useCharacter(settings, onVoiceMessage) {
 			if (stillLeft < inferNeed) setNotice(`Đang tạo TTS chương ${i + 2} (infer ~${Math.ceil(inferNeed)}s)...`);
 			await playing;
 		}
-		setNotice(null);
+		if (!keepNotice) setNotice(null);
 	}, []);
 	return {
 		configured,
