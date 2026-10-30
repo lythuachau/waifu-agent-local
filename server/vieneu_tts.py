@@ -1,11 +1,13 @@
-"""VieNeu v3 Turbo (ONNX/CPU) with ZeroTTS speaker clones.
+"""VieNeu v3 Turbo with ZeroTTS speaker clones.
 
+GPU (default): PyTorch CUDA acoustic + codec.
+CPU: ONNX fp32 (i7-10700 has no VNNI; int8 babbles).
 Clone is from 5–8 s ZeroTTS WAVs, not from voice.npz latents.
-i7-10700 has no VNNI → fp32 only (int8 babbles).
 """
 from __future__ import annotations
 
 import logging
+import os
 import threading
 from pathlib import Path
 
@@ -38,10 +40,29 @@ def available() -> bool:
     return all((REFS / f"{name}.wav").exists() for name, _label, _g in SPEAKERS)
 
 
+def want_cuda() -> bool:
+    return (os.environ.get("TTS_DEVICE") or os.environ.get("VIENEU_DEVICE") or "cuda").strip().lower() in ("cuda", "gpu")
+
+
+def _engine_device() -> str:
+    if _engine is None:
+        return ""
+    backend = getattr(_engine, "backend", "") or ""
+    eng = getattr(_engine, "engine", None)
+    dev = getattr(eng, "device", None) if eng is not None else None
+    if dev is not None:
+        kind = getattr(dev, "type", None) or str(dev)
+        return str(kind)
+    return backend
+
+
 def status() -> dict:
     return {
         "loaded": _engine is not None,
         "error": _error,
+        "backend": getattr(_engine, "backend", None) if _engine is not None else None,
+        "device": _engine_device(),
+        "want_cuda": want_cuda(),
         "voices_file": str(VOICES_JSON) if VOICES_JSON.exists() else None,
         "cloned": [name for name, _l, _g in SPEAKERS if (REFS / f"{name}.wav").exists()],
     }
@@ -54,8 +75,27 @@ def get_engine():
             return _engine
         from vieneu import Vieneu
 
-        log.info("loading VieNeu v3 Turbo ONNX fp32")
-        tts = Vieneu(mode="v3turbo", backend="onnx", precision="fp32")
+        try:
+            if want_cuda():
+                import torch
+
+                if not torch.cuda.is_available():
+                    raise RuntimeError(
+                        "TTS_DEVICE=cuda nhưng torch không thấy GPU. "
+                        "Compose cần gpus: all và Docker Desktop NVIDIA."
+                    )
+                log.info(
+                    "loading VieNeu v3 Turbo PyTorch CUDA device=%s",
+                    torch.cuda.get_device_name(0),
+                )
+                tts = Vieneu(mode="v3turbo", backend="pytorch", device="cuda")
+            else:
+                log.info("loading VieNeu v3 Turbo ONNX fp32")
+                tts = Vieneu(mode="v3turbo", backend="onnx", precision="fp32")
+        except Exception as e:
+            _error = str(e)
+            log.exception("VieNeu load failed")
+            raise
         loaded = _load_cloned(tts)
         if loaded:
             log.info("VieNeu loaded clones from %s: %s", VOICES_JSON, loaded)
@@ -182,6 +222,17 @@ def trim_trailing_extra(audio: np.ndarray, sr: int) -> np.ndarray:
 def iter_pcm_f32le(text: str, speaker: str, sample_rate: int = 44100):
     tts = get_engine()
     sr = int(getattr(tts, "sample_rate", 48000))
+    step = int(sample_rate * 0.32) * 4
+    if getattr(tts, "backend", "") == "pytorch":
+        with _lock:
+            wav = tts.infer(text, voice=speaker, apply_watermark=False)
+        wav = trim_trailing_extra(np.asarray(wav, dtype=np.float32).reshape(-1), sr)
+        raw = resample_linear(wav, sr, sample_rate).tobytes()
+        if not raw:
+            return
+        for i in range(0, len(raw), step):
+            yield raw[i : i + step]
+        return
     hold = int(sr * 0.40)
     pending: list[np.ndarray] = []
     pending_n = 0

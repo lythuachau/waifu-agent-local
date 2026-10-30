@@ -190,13 +190,16 @@ def zerotts_providers() -> list:
         return ["CPUExecutionProvider"]
     if want in ("dml", "gpu") and "DmlExecutionProvider" in avail:
         return [("DmlExecutionProvider", {"device_id": 0}), "CPUExecutionProvider"]
-    if want == "cuda" and "CUDAExecutionProvider" in avail:
+    if want == "cuda":
+        if "CUDAExecutionProvider" not in avail:
+            raise RuntimeError(
+                "ZEROTTS_DEVICE=cuda nhưng onnxruntime không có CUDAExecutionProvider"
+            )
         return [
             ("CUDAExecutionProvider", {
                 "device_id": 0,
                 "arena_extend_strategy": "kSameAsRequested",
             }),
-            "CPUExecutionProvider",
         ]
     return ["CPUExecutionProvider"]
 
@@ -220,7 +223,8 @@ def get_zerotts():
                 intra_op_num_threads=2 if head != "CPUExecutionProvider" else 4,
             )
         except Exception as e:
-            if head == "CPUExecutionProvider":
+            want = (os.environ.get("ZEROTTS_DEVICE") or "cuda").strip().lower()
+            if want == "cuda" or head == "CPUExecutionProvider":
                 raise
             log.warning("ZeroTTS GPU load failed (%s), retrying CPU", e)
             _zerotts = ZeroTTS.from_pretrained(

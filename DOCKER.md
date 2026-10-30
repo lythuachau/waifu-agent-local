@@ -54,13 +54,13 @@ Ollama nhúng (máy không có Ollama Windows):
 .\scripts\setup-docker.ps1 -BundledOllama
 ```
 
-GPU cho Ollama trong container (NVIDIA):
+TTS mặc định **GPU** (VieNeu PyTorch CUDA + ZeroTTS ORT CUDA). Compose có `gpus: all`. Image CPU: `docker compose build --file Dockerfile.cpu`.
+
+GPU cho Ollama trong container:
 
 ```powershell
 docker compose --profile bundled-ollama -f docker-compose.yml -f docker-compose.gpu.yml up -d
 ```
-
-TTS chính VieNeu chạy CPU trong image (`onnxruntime`). CUDA 13 trên host không đi vào container.
 
 ## Volume
 

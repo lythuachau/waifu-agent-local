@@ -9,6 +9,7 @@ services:
     container_name: waifu-agent
     restart: unless-stopped
     init: true
+    gpus: all
     ports:
       - "127.0.0.1:8787:8787"
     extra_hosts:
@@ -24,7 +25,10 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-ollama}
       LLM_MODEL: ${LLM_MODEL:-llama3.2}
       LLM_BACKEND: ${LLM_BACKEND:-codex}
-      ZEROTTS_DEVICE: ${ZEROTTS_DEVICE:-cpu}
+      TTS_DEVICE: ${TTS_DEVICE:-cuda}
+      ZEROTTS_DEVICE: ${ZEROTTS_DEVICE:-cuda}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
       PYTHONUNBUFFERED: "1"
       HF_HOME: /root/.cache/huggingface
     volumes:
@@ -51,7 +55,7 @@ services:
       interval: 20s
       timeout: 8s
       retries: 15
-      start_period: 90s
+      start_period: 180s
 
   ollama:
     image: ollama/ollama:latest

@@ -1,4 +1,4 @@
-# Optional GPU overlay for bundled Ollama (NVIDIA + Docker Desktop GPU).
+# Extra GPU overlay for bundled Ollama. waifu-agent already has gpus: all.
 # Usage: docker compose --profile bundled-ollama -f docker-compose.yml -f docker-compose.gpu.yml up -d
 services:
   ollama:
