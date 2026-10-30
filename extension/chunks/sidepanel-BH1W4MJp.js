@@ -23660,13 +23660,9 @@ var Playback = class {
 				if (nonce !== this.#nonce) return;
 				continue;
 			}
-			if (prefetched?.index === i) {
-				const buffer = await prefetched.buffer;
-				if (!buffer || nonce !== this.#nonce) return;
-				await this.#playOne(buffer, nonce);
-			} else {
-				await this.#playStream(chunk.text, nonce);
-			}
+			const buffer = await (prefetched?.index === i ? prefetched.buffer : this.#synthesise(chunk.text));
+			if (!buffer || nonce !== this.#nonce) return;
+			await this.#playOne(buffer, nonce);
 			if (nonce !== this.#nonce) return;
 		}
 	}
@@ -23803,7 +23799,10 @@ var Playback = class {
 	async #synthesiseNow(text) {
 		const ws = await this.#connect();
 		const context = this.#ensureContext();
+		if (!await this.#ensureRunning(context)) throw new Error("The browser blocked her voice: click in the side panel (or press Send) to allow sound.");
 		const voice = this.voice();
+		let pcm = false;
+		let rate = CARTESIA_SAMPLE_RATE;
 		const frames = await new Promise((resolve) => {
 			const collected = [];
 			let settled = false;
@@ -23835,6 +23834,12 @@ var Playback = class {
 				} catch {
 					return;
 				}
+				if (payload.type === "start" && payload.format === "pcm_f32le") {
+					pcm = true;
+					rate = payload.sample_rate || CARTESIA_SAMPLE_RATE;
+					bump();
+					return;
+				}
 				if (payload.type === "progress") {
 					bump();
 					return;
@@ -23858,7 +23863,7 @@ var Playback = class {
 		if (!frames) return null;
 		const bytes = concat(frames);
 		try {
-			if (voice.provider === "cartesia") return pcmF32ToBuffer(context, bytes, CARTESIA_SAMPLE_RATE);
+			if (pcm || voice.provider === "cartesia") return pcmF32ToBuffer(context, bytes, rate);
 			return await context.decodeAudioData(bytes.slice(0));
 		} catch (error) {
 			this.events.onError(`Could not decode the audio (${voice.provider}).`);
