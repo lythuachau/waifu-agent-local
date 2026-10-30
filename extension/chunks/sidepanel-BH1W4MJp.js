@@ -23554,6 +23554,8 @@ var GESTURE_WAIT_MS = 15e3;
 var IDLE_CLOSE_MS = 2e4;
 /** Cartesia's `raw` / `pcm_f32le` default */
 var CARTESIA_SAMPLE_RATE = 44100;
+/** Hold this much generated audio before the playhead starts (covers RTF≈1 stalls). */
+var STREAM_PREROLL_S = 8;
 var Playback = class {
 	urls;
 	voice;
@@ -23660,9 +23662,13 @@ var Playback = class {
 				if (nonce !== this.#nonce) return;
 				continue;
 			}
-			const buffer = await (prefetched?.index === i ? prefetched.buffer : this.#synthesise(chunk.text));
-			if (!buffer || nonce !== this.#nonce) return;
-			await this.#playOne(buffer, nonce);
+			if (prefetched?.index === i) {
+				const buffer = await prefetched.buffer;
+				if (!buffer || nonce !== this.#nonce) return;
+				await this.#playOne(buffer, nonce);
+			} else {
+				await this.#playStream(chunk.text, nonce);
+			}
 			if (nonce !== this.#nonce) return;
 		}
 	}
@@ -23722,6 +23728,11 @@ var Playback = class {
 			let rate = CARTESIA_SAMPLE_RATE;
 			let streamPcm = false;
 			let collected = [];
+			let pending = [];
+			let buffered = 0;
+			let started = false;
+			let playHead = 0;
+			let gotAudio = false;
 			let settled = false;
 			let timer = null;
 			const finish = async (legacyFrames) => {
@@ -23739,6 +23750,7 @@ var Playback = class {
 						console.warn("[character/tts] decode failed", error);
 					}
 				}
+				if (gotAudio) this.events.onAudio(false);
 				resolve();
 			};
 			const bump = () => {
@@ -23749,6 +23761,47 @@ var Playback = class {
 					finish(collected.length ? collected : null);
 				}, CHUNK_TIMEOUT_MS);
 			};
+			const schedule = (buffer) => {
+				if (nonce !== this.#nonce || settled || !buffer || buffer.length < 32) return;
+				if (context.state !== "running") context.resume().catch(() => {});
+				const source = context.createBufferSource();
+				source.buffer = buffer;
+				source.connect(context.destination);
+				const now = context.currentTime;
+				if (!gotAudio) {
+					playHead = now + 0.04;
+					this.events.onAudio(true);
+					gotAudio = true;
+				}
+				let startAt = playHead;
+				let offset = 0;
+				if (startAt < now) {
+					offset = now - startAt;
+					if (offset >= buffer.duration - 0.01) {
+						offset = 0;
+						startAt = now;
+					} else startAt = now;
+				}
+				try {
+					source.start(startAt, offset);
+				} catch {
+					try {
+						source.start(now);
+						offset = 0;
+						startAt = now;
+					} catch {
+						return;
+					}
+				}
+				playHead = startAt + Math.max(0, buffer.duration - offset);
+				this.#source = source;
+			};
+			const beginPlayback = () => {
+				if (started || settled) return;
+				started = true;
+				for (const buffer of pending) schedule(buffer);
+				pending = [];
+			};
 			ws.onmessage = (event) => {
 				if (nonce !== this.#nonce) {
 					finish(null);
@@ -23756,7 +23809,18 @@ var Playback = class {
 				}
 				if (typeof event.data !== "string") {
 					bump();
-					collected.push(event.data);
+					if (streamPcm) {
+						try {
+							const buffer = pcmF32ToBuffer(context, event.data, rate);
+							if (!started) {
+								pending.push(buffer);
+								buffered += buffer.duration;
+								if (buffered >= STREAM_PREROLL_S) beginPlayback();
+							} else schedule(buffer);
+						} catch (error) {
+							console.warn("[character/tts] pcm chunk", error);
+						}
+					} else collected.push(event.data);
 					return;
 				}
 				let payload;
@@ -23776,7 +23840,20 @@ var Playback = class {
 					return;
 				}
 				if (payload.type === "done") {
-					finish(collected.length ? collected : null);
+					if (streamPcm) {
+						beginPlayback();
+						const waitPlayhead = () => {
+							if (nonce !== this.#nonce || settled) return finish(null);
+							if (context.state !== "running") context.resume().catch(() => {});
+							const remain = playHead - context.currentTime;
+							if (remain > 0.05) {
+								setTimeout(waitPlayhead, Math.min(Math.max(remain * 1e3, 40), 250));
+								return;
+							}
+							finish(null);
+						};
+						waitPlayhead();
+					} else finish(collected.length ? collected : null);
 					return;
 				}
 				if (payload.type === "error") {

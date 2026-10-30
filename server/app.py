@@ -1426,7 +1426,7 @@ async def speech_socket(ws: WebSocket, kind: str):
             use_zt, speaker = local_speech.will_use_zerotts(spoken, voice_id)
             use_vn, vn_speaker = local_speech.will_use_vieneu(spoken, voice_id)
             if use_vn:
-                q: asyncio.Queue = asyncio.Queue(maxsize=6)
+                q: asyncio.Queue = asyncio.Queue(maxsize=64)
                 loop = asyncio.get_running_loop()
 
                 def _produce_vn() -> None:
@@ -1455,12 +1455,14 @@ async def speech_socket(ws: WebSocket, kind: str):
                         break
                     if isinstance(item, Exception):
                         vn_ok = False
-                        log.warning("vieneu stream error, fallback ZeroTTS")
+                        log.warning("tts ws vieneu failed: %s", item)
+                        vieneu_tts.reset_engine()
+                        await ws.send_text(json.dumps({"type": "error", "message": str(item)}))
                         break
                     await ws.send_bytes(item)
                 if vn_ok:
                     await ws.send_text(json.dumps({"type": "done"}))
-                    continue
+                continue
             if use_zt:
                 try:
                     local_speech.get_zerotts()

@@ -40,6 +40,21 @@ def available() -> bool:
     return all((REFS / f"{name}.wav").exists() for name, _label, _g in SPEAKERS)
 
 
+def reset_engine() -> None:
+    global _engine, _error
+    with _lock:
+        _engine = None
+        _error = None
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
+        log.warning("VieNeu engine reset (CUDA/session)")
+
+
 def want_cuda() -> bool:
     return (os.environ.get("TTS_DEVICE") or os.environ.get("VIENEU_DEVICE") or "cuda").strip().lower() in ("cuda", "gpu")
 
