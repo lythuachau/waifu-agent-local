@@ -23614,7 +23614,15 @@ var Playback = class {
 		this.#context = null;
 	}
 	#ensureContext() {
-		this.#context ??= new AudioContext();
+		if (!this.#context) {
+			this.#context = new AudioContext();
+			this.#context.addEventListener("statechange", () => {
+				if (this.#draining && this.#context?.state === "suspended") this.#context.resume().catch(() => {});
+			});
+			document.addEventListener("visibilitychange", () => {
+				if (this.#draining) this.#context?.resume().catch(() => {});
+			});
+		}
 		return this.#context;
 	}
 	async #drain() {
@@ -23750,6 +23758,7 @@ var Playback = class {
 			};
 			const schedule = (buffer) => {
 				if (nonce !== this.#nonce || settled || !buffer || buffer.length < 32) return;
+				if (context.state !== "running") context.resume().catch(() => {});
 				const source = context.createBufferSource();
 				source.buffer = buffer;
 				source.connect(context.destination);
@@ -23764,15 +23773,22 @@ var Playback = class {
 				if (startAt < now) {
 					offset = now - startAt;
 					if (offset >= buffer.duration - 0.01) {
-						playHead = now;
-						return;
+						offset = 0;
+						startAt = now;
+					} else {
+						startAt = now;
 					}
-					startAt = now;
 				}
 				try {
 					source.start(startAt, offset);
 				} catch {
-					return;
+					try {
+						source.start(now);
+						offset = 0;
+						startAt = now;
+					} catch {
+						return;
+					}
 				}
 				playHead = startAt + Math.max(0, buffer.duration - offset);
 				this.#source = source;
@@ -23811,8 +23827,17 @@ var Playback = class {
 				}
 				if (payload.type === "done") {
 					if (streamPcm) {
-						const waitMs = Math.max(0, (playHead - context.currentTime) * 1e3) + 80;
-						setTimeout(() => finish(null), waitMs);
+						const waitPlayhead = () => {
+							if (nonce !== this.#nonce || settled) return finish(null);
+							if (context.state !== "running") context.resume().catch(() => {});
+							const remain = playHead - context.currentTime;
+							if (remain > 0.05) {
+								setTimeout(waitPlayhead, Math.min(Math.max(remain * 1e3, 40), 250));
+								return;
+							}
+							finish(null);
+						};
+						waitPlayhead();
 					} else finish(collected.length ? collected : null);
 					return;
 				}
@@ -24706,7 +24731,10 @@ function useCharacter(settings, onVoiceMessage) {
 		chrome.tabs.onActivated.addListener(onActivated);
 		chrome.tabs.onUpdated.addListener(onUpdated);
 		showActive();
-		const heartbeat = setInterval(sendAvatarState, AVATAR_STATE_HEARTBEAT_MS);
+		const heartbeat = setInterval(() => {
+			sendAvatarState();
+			playbackRef.current?.unlock();
+		}, AVATAR_STATE_HEARTBEAT_MS);
 		return () => {
 			disposed = true;
 			clearInterval(heartbeat);
