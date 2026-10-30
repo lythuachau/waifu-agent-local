@@ -28868,7 +28868,7 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 		const persona = (c.personas || []).find((p) => p.avatar_id === (config?.avatarId ?? ""));
 		setLocalRec({
 			llm_backend: s.llm_backend || "codex",
-			ollama_model: s.ollama_model || "llama3.2",
+			ollama_model: s.ollama_model || "dolphin-llama3:8b",
 			codex_model: s.codex_model || "",
 			vision_model: s.vision_model || "ocr",
 			default_engine: s.default_engine || "auto",

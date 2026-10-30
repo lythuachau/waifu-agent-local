@@ -1,10 +1,10 @@
 {
   "llm_backend": "codex",
-  "ollama_model": "llama3.2",
+  "ollama_model": "dolphin-llama3:8b",
   "codex_model": "gpt-6-luna",
   "vision_model": "ocr",
-  "default_engine": "auto",
-  "default_edge": "ja-JP-NanamiNeural",
+  "default_engine": "vieneu",
+  "default_edge": "zerotts-giahuy",
   "voice_map": {
     "ba301706-ea97-4328-a27f-71699ec2482d": {
       "edge": "en-US-AvaNeural",
@@ -103,8 +103,8 @@
       "engine": "auto"
     },
     "e9cd42a1-3651-4dd1-ba36-612479f56fa8": {
-      "edge": "ja-JP-AoiNeural",
-      "engine": "auto"
+      "edge": "zerotts-maichi",
+      "engine": "zerotts"
     }
   },
   "tts_gateway": "local"

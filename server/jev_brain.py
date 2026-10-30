@@ -15,14 +15,15 @@ TASK_RE = re.compile(r"tìm|search|click|mở http|goto|go to|mua|điền|type |
 
 LOCAL_PREFER = (
     "qwen2.5:14b",
+    "dolphin-llama3:8b",
+    "dolphin-llama3:latest",
+    "dolphin-llama3",
     "qwen2.5:7b",
     "qwen2.5",
     "llama3.1:8b",
     "llama3.1",
     "mistral:7b",
     "gemma2:9b",
-    "llama3.2:latest",
-    "llama3.2",
 )
 
 

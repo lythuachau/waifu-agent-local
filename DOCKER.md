@@ -19,7 +19,7 @@ cd <clone>\self-host
 Script sẽ:
 
 - bật Docker Desktop nếu chưa chạy
-- ghi `.env` (Ollama trên máy nếu có, không thì Ollama trong Compose + `ollama pull llama3.2`)
+- ghi `.env` (Ollama trên máy nếu có, không thì Ollama trong Compose + `ollama pull dolphin-llama3:8b`)
 - `docker compose build` + `up -d`
 - ghi Run key + file Startup `WaifuAgent-Docker.cmd` (logon, không cần admin)
 - scheduled task cùng tên nếu Windows cho phép

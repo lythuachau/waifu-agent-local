@@ -199,7 +199,7 @@ async function load() {
   catalog = await r.json();
   const s = catalog.settings || {};
   $("llm_backend").value = s.llm_backend || "ollama";
-  fillSelect($("ollama_model"), catalog.ollama_models || [], s.ollama_model || "llama3.2");
+  fillSelect($("ollama_model"), catalog.ollama_models || [], s.ollama_model || "dolphin-llama3:8b");
   fillSelect($("codex_model"), (catalog.codex_models || []).map((id) => ({id, label: id})), s.codex_model);
   const vis = (catalog.vision_models || []).map((m) => ({
     id: m.id,
