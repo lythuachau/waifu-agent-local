@@ -17,40 +17,15 @@
 		}
 		return el;
 	}
-	function canvasLine(c) {
-		return Array.isArray(c.__zwLine) ? c.__zwLine.join("") : "";
-	}
-	function canvasArea(c) {
-		const r = c.getBoundingClientRect();
-		const w = r.width || c.width || 0;
-		const h = r.height || c.height || 0;
-		return w * h;
-	}
-	function isReaderCanvas(c) {
-		return /novel-reader__canvas|reader__canvas/i.test(c.className || "");
-	}
-	/** Novel body only: named reader canvas, else the largest canvas that has text. */
-	function pickReaderCanvas() {
-		const canvases = [...document.querySelectorAll("canvas")];
-		const named = canvases.filter(isReaderCanvas);
-		const pool = named.length ? named : canvases;
-		let best = null;
-		for (const c of pool) {
-			const line = canvasLine(c).trim();
-			if (!line) continue;
-			const area = canvasArea(c);
-			if (!best || line.length > best.line.length || line.length === best.line.length && area > best.area) {
-				best = { c, line, area };
-			}
-		}
-		return best;
-	}
 	function publish() {
-		const picked = pickReaderCanvas();
+		const canvases = document.querySelectorAll("canvas");
+		const parts = [];
+		for (const c of canvases) {
+			const line = Array.isArray(c.__zwLine) ? c.__zwLine.join("") : "";
+			if (line.trim()) parts.push(line.trim());
+		}
 		const el = dumpEl();
-		if (!el.isConnected) return;
-		el.textContent = picked ? picked.line : "";
-		el.setAttribute("data-zw-canvas", picked ? String(picked.c.className || "largest") : "");
+		if (el.isConnected) el.textContent = parts.join("\n\n");
 	}
 	let raf = 0;
 	function schedulePublish() {

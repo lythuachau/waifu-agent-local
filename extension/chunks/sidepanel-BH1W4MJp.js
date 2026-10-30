@@ -23476,94 +23476,14 @@ function pageText(state) {
 	if (content.replace(/\[\d+\]|<[^>]*>/g, " ").replace(/\s+/g, " ").trim().length < MIN_TEXT_CHARS) return null;
 	return content.length > MAX_TEXT_CHARS ? `${content.slice(0, MAX_TEXT_CHARS)}\n…` : content;
 }
-/** Site chrome spoken before the chapter body (tabs, follow, prev/next). Longest first. */
-var CHAPTER_CHROME = [
-	"đang mở chương truyện",
-	"danh sách chương",
-	"chương trước",
-	"chương sau",
-	"đang theo dõi",
-	"bỏ theo dõi",
-	"previous chapter",
-	"table of contents",
-	"next chapter",
-	"cùng tác giả",
-	"thanh công cụ",
-	"đang mở chương",
-	"giới thiệu",
-	"bình luận",
-	"theo dõi",
-	"đăng nhập",
-	"đăng ký",
-	"trang chủ",
-	"thể loại",
-	"tìm kiếm",
-	"lịch sử",
-	"tủ sách",
-	"đánh dấu",
-	"đánh giá",
-	"đề xuất",
-	"báo cáo",
-	"chia sẻ",
-	"font chữ",
-	"cỡ chữ",
-	"nền tối",
-	"nền sáng",
-	"cài đặt",
-	"đọc ngay",
-	"đọc tiếp",
-	"đang tải",
-	"mục lục",
-	"bookmark",
-	"comment",
-	"sign in",
-	"follow",
-	"login",
-	"home"
-];
-function escapeRe(s) {
-	return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function pickLongestCanvasBlock(text) {
-	const parts = String(text || "").split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-	if (parts.length <= 1) return String(text || "").trim();
-	let best = parts[0];
-	for (const p of parts) if (p.length > best.length) best = p;
-	return best;
-}
-/** Drop leading tab/nav labels; keep from the chapter heading or first remaining prose. */
-function stripChapterChrome(text) {
-	let s = pickLongestCanvasBlock(text).replace(/\s+/g, " ").trim();
-	if (!s) return "";
-	const phraseRe = CHAPTER_CHROME.slice().sort((a, b) => b.length - a.length).map((p) => new RegExp("^" + escapeRe(p), "i"));
-	let guard = 0;
-	while (s && guard++ < 100) {
-		const before = s;
-		s = s.replace(/^\(\*\)\s*/, "");
-		s = s.replace(/^\d+\s*\/\s*\d+\s*/, "");
-		for (const re of phraseRe) {
-			if (re.test(s)) {
-				s = s.replace(re, "").replace(/^\s+/, "");
-				break;
-			}
-		}
-		s = s.replace(/^(?:Chương\s*\d+\s*)+(?=Chương\s*\d+\s*[:.])/i, "");
-		s = s.replace(/^(?:Chương\s*\d+\s*)+(?=Chương\s*\d+\b)/i, "");
-		s = s.trim();
-		if (s === before) break;
-	}
-	const heading = s.search(/Chương\s*\d+\s*[:.]/i);
-	if (heading > 0 && heading < 400) s = s.slice(heading);
-	return s.replace(/\s+/g, " ").trim();
-}
 function chapterFromContent(content) {
 	const raw = String(content || "");
 	const mark = "[Canvas fillText]";
-	if (!raw.includes(mark)) return "";
-	let body = raw.slice(raw.indexOf(mark) + mark.length);
+	let body = raw.includes(mark) ? raw.slice(raw.indexOf(mark) + mark.length) : raw;
 	body = body.replace(/\[Start of page\]|\[End of page\]/g, " ");
+	body = body.replace(/Interactive elements[\s\S]*$/i, " ");
 	body = body.replace(/<[^>]+>/g, " ").replace(/\[\d+\]/g, " ");
-	return stripChapterChrome(body);
+	return body.replace(/\s+/g, " ").trim();
 }
 function nextChapterUrl(url) {
 	try {
