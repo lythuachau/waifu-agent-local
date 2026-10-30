@@ -23670,13 +23670,21 @@ var Playback = class {
 	get speaking() {
 		return this.#draining;
 	}
+	#resetPlayhead() {
+		this.#ttsArmed = false;
+		this.#ttsComplete = false;
+		this.#playEnd = 0;
+		this.#playStart = 0;
+	}
 	/** Seconds of audio still scheduled. Infinity until this utterance has been fully queued. */
 	remaining() {
 		if (!this.#draining) return 0;
 		if (!this.#ttsArmed || !this.#ttsComplete) return Infinity;
 		const ctx = this.#context;
 		if (!ctx) return 0;
-		return Math.max(0, this.#playEnd - ctx.currentTime);
+		const left = this.#playEnd - ctx.currentTime;
+		if (left < -0.5) return Infinity;
+		return Math.max(0, left);
 	}
 	/** Length of the current utterance once TTS has queued it. */
 	scheduledDuration() {
@@ -23719,6 +23727,10 @@ var Playback = class {
 				}
 				const left = this.remaining();
 				const dur = this.scheduledDuration();
+				if (!(dur > 0) || left === Infinity) {
+					setTimeout(tick, 120);
+					return;
+				}
 				const threshold = dur < PREFETCH_MIN_DUR_S ? 0.15 : Math.min(PREFETCH_REMAIN_S, Math.max(4, dur * 0.12));
 				if (left <= threshold) return resolve();
 				setTimeout(tick, 100);
@@ -23780,10 +23792,7 @@ var Playback = class {
 		}
 		this.#settleActive?.();
 		this.#settleActive = null;
-		this.#ttsArmed = false;
-		this.#ttsComplete = false;
-		this.#playEnd = 0;
-		this.#playStart = 0;
+		this.#resetPlayhead();
 		this.events.onStopped();
 		this.events.onMessage(null);
 	}
@@ -23811,6 +23820,7 @@ var Playback = class {
 			while (this.#queue.length) {
 				const { chunks, id, settle, buffer } = this.#queue.shift();
 				this.events.onMessage(id ?? null);
+				this.#resetPlayhead();
 				try {
 					if (buffer) await this.#playOne(buffer, this.#nonce);
 					else await this.#playMessage(chunks);
@@ -23906,9 +23916,7 @@ var Playback = class {
 		if (nonce !== this.#nonce) return;
 		const voice = this.voice();
 		const speechSec = estimateSpeechSec(text);
-		this.#ttsArmed = false;
-		this.#ttsComplete = false;
-		this.#playEnd = 0;
+		this.#resetPlayhead();
 		return new Promise((resolve) => {
 			let rate = CARTESIA_SAMPLE_RATE;
 			let streamPcm = false;
@@ -24195,6 +24203,7 @@ var Playback = class {
 		return context.state === "running";
 	}
 	async #playOne(buffer, nonce) {
+		this.#resetPlayhead();
 		const context = this.#ensureContext();
 		if (!await this.#ensureRunning(context)) throw new Error("The browser blocked her voice: click in the side panel (or press Send) to allow sound.");
 		if (nonce !== this.#nonce) return;
@@ -25199,7 +25208,7 @@ function useCharacter(settings, onVoiceMessage) {
 			}
 			const left = playback.remaining();
 			const dur = playback.scheduledDuration();
-			const skipPrefetch = dur < PREFETCH_MIN_DUR_S || left <= PREFETCH_SKIP_TAIL_S || !playback.speaking;
+			const skipPrefetch = dur < PREFETCH_MIN_DUR_S || left <= PREFETCH_SKIP_TAIL_S || left === Infinity || !playback.speaking;
 			const prevHead = body.slice(0, 120);
 			if (skipPrefetch) {
 				await playing;
