@@ -39,6 +39,17 @@ This copies `unpacked\`, rewrites `https://api.zeroweight.ai` → `http://127.0.
 
 ## 2. Start the API
 
+**Docker (Windows, starts at logon):** see `DOCKER.md`. New machine:
+
+```powershell
+cd E:\ll\waifu-agent-extract\self-host
+.\scripts\setup-docker.ps1
+```
+
+That builds the image, `docker compose up -d`, and registers scheduled task `WaifuAgent-Docker`. After reboot you do not run commands by hand.
+
+**Native Python (debug / no Docker):**
+
 ```powershell
 cd E:\ll\waifu-agent-extract\self-host
 # optional:
@@ -48,6 +59,8 @@ cd E:\ll\waifu-agent-extract\self-host
 # $env:TTS_VOICE = "ja-JP-NanamiNeural"
 .\start.ps1
 ```
+
+If the `waifu-agent` container is already up, `start.ps1` exits and leaves Docker in charge.
 
 Check `http://127.0.0.1:8787/` → `{"message":"AI Avatar Public Service Running","local":true,...}`
 
@@ -74,6 +87,10 @@ Restart the API after edits. The extension caches personas; toggle the companion
 self-host/
   build.py
   start.ps1
+  Dockerfile
+  docker-compose.yml
+  DOCKER.md
+  scripts/setup-docker.ps1
   README.md
   extension/          patched CRX (generated)
   server/

@@ -1,0 +1,37 @@
+# Waifu Agent local API — Linux container for Docker Desktop (Windows).
+# Avatar .zai packs, settings, and Codex auth stay on the host via compose volumes.
+FROM python:3.12-bookworm
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HF_HOME=/root/.cache/huggingface \
+    ZW_LOCAL_HOST=0.0.0.0 \
+    ZW_LOCAL_PORT=8787 \
+    ZW_PUBLIC_BASE=http://127.0.0.1:8787 \
+    ZEROTTS_DEVICE=cpu
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ffmpeg \
+        git \
+        ca-certificates \
+        libgomp1 \
+        libglib2.0-0 \
+        libsndfile1 \
+        espeak-ng \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY server/requirements.txt /app/server/requirements.txt
+RUN python -c "from pathlib import Path; p=Path('/app/server/requirements.txt'); p.write_text(p.read_text().replace('onnxruntime-gpu','onnxruntime'))" \
+    && pip install --no-cache-dir -r /app/server/requirements.txt
+
+COPY server /app/server
+RUN mkdir -p /app/server/static/zai \
+    && rm -f /app/server/data/zw_key.txt
+
+WORKDIR /app/server
+EXPOSE 8787
+
+CMD ["python", "app.py"]

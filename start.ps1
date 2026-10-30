@@ -1,6 +1,14 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
+$dockerName = docker ps --filter "name=waifu-agent" --filter "status=running" --format "{{.Names}}" 2>$null
+if ($dockerName -match "waifu-agent") {
+  Write-Host "API already in Docker ($dockerName): http://127.0.0.1:8787/healthz"
+  Write-Host "Logs: docker compose logs -f waifu-agent"
+  Write-Host "Stop: docker compose down"
+  exit 0
+}
+
 if (-not (Test-Path ".\extension\manifest.json")) {
   python .\build.py
 }

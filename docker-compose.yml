@@ -1,0 +1,74 @@
+name: waifu-agent
+
+services:
+  waifu-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: waifu-agent-local:1.0.4.17
+    container_name: waifu-agent
+    restart: unless-stopped
+    init: true
+    ports:
+      - "127.0.0.1:8787:8787"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      ZW_LOCAL_HOST: "0.0.0.0"
+      ZW_LOCAL_PORT: "8787"
+      ZW_PUBLIC_BASE: "http://127.0.0.1:8787"
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-ollama}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2}
+      LLM_BACKEND: ${LLM_BACKEND:-codex}
+      ZEROTTS_DEVICE: ${ZEROTTS_DEVICE:-cpu}
+      PYTHONUNBUFFERED: "1"
+      HF_HOME: /root/.cache/huggingface
+    volumes:
+      - ./server/static:/app/server/static
+      - ./server/data:/app/server/data
+      - type: bind
+        source: ${CODEX_DIR:-${USERPROFILE}/.codex}
+        target: /root/.codex
+        bind:
+          create_host_path: true
+      - hf-cache:/root/.cache/huggingface
+    depends_on:
+      ollama:
+        condition: service_started
+        required: false
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/healthz', timeout=4)",
+        ]
+      interval: 20s
+      timeout: 8s
+      retries: 15
+      start_period: 90s
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: waifu-ollama
+    restart: unless-stopped
+    profiles: ["bundled-ollama"]
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  hf-cache:
+    name: waifu-agent-hf
+  ollama-data:
+    name: waifu-agent-ollama

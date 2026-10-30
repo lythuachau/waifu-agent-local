@@ -8,6 +8,7 @@ venv/
 server/data/zw_key.txt
 .env
 .env.*
+!.env.example
 
 server/data/zerotts-refs/*.mp3
 server/data/clone-check/*.mp3

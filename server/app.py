@@ -14,6 +14,7 @@ import os
 import re
 import threading
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
@@ -35,7 +36,8 @@ DATA = ROOT / "data"
 STATIC = ROOT / "static"
 HOST = os.environ.get("ZW_LOCAL_HOST", "127.0.0.1")
 PORT = int(os.environ.get("ZW_LOCAL_PORT", "8787"))
-PUBLIC = os.environ.get("ZW_PUBLIC_BASE", f"http://{HOST}:{PORT}")
+_pub_host = "127.0.0.1" if HOST in ("0.0.0.0", "::", "[::]") else HOST
+PUBLIC = os.environ.get("ZW_PUBLIC_BASE", f"http://{_pub_host}:{PORT}")
 LLM_BASE = os.environ.get("LLM_BASE_URL", "http://127.0.0.1:11434/v1").rstrip("/")
 LLM_KEY = os.environ.get("LLM_API_KEY", "ollama")
 LLM_MODEL = os.environ.get("LLM_MODEL", "llama3.2")
@@ -75,7 +77,14 @@ if OFFLINE_PERSONAS.exists():
         rec = json.loads(p.read_text(encoding="utf-8"))
         PERSONAS[p.stem] = rec
 
-app = FastAPI(title="Waifu Agent Local", version="0.1.0")
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    local_speech.start_warmup()
+    threading.Thread(target=lambda: vieneu_tts.get_engine(), daemon=True, name="vieneu-warmup").start()
+    yield
+
+
+app = FastAPI(title="Waifu Agent Local", version="0.1.0", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -85,9 +94,6 @@ app.add_middleware(
 )
 if (STATIC / "avatars").exists():
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
-
-local_speech.start_warmup()
-threading.Thread(target=lambda: vieneu_tts.get_engine(), daemon=True, name="vieneu-warmup").start()
 
 
 def any_key(_x_zw_api_key: str | None, authorization: str | None) -> str:
