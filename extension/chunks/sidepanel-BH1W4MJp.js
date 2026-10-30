@@ -10768,6 +10768,16 @@ var RotateCcw = createLucideIcon("rotate-ccw", [["path", {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var BookOpen = createLucideIcon("book-open", [
+	["path", {
+		d: "M12 7v14",
+		key: "1akyts"
+	}],
+	["path", {
+		d: "M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z",
+		key: "ruj8y"
+	}]
+]);
 var Send = createLucideIcon("send", [["path", {
 	d: "M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z",
 	key: "1ffxy3"
@@ -23466,6 +23476,50 @@ function pageText(state) {
 	if (content.replace(/\[\d+\]|<[^>]*>/g, " ").replace(/\s+/g, " ").trim().length < MIN_TEXT_CHARS) return null;
 	return content.length > MAX_TEXT_CHARS ? `${content.slice(0, MAX_TEXT_CHARS)}\n…` : content;
 }
+function chapterFromContent(content) {
+	const raw = String(content || "");
+	const mark = "[Canvas fillText]";
+	let body = raw.includes(mark) ? raw.slice(raw.indexOf(mark) + mark.length) : raw;
+	body = body.replace(/\[Start of page\]|\[End of page\]/g, " ");
+	body = body.replace(/Interactive elements[\s\S]*$/i, " ");
+	body = body.replace(/<[^>]+>/g, " ").replace(/\[\d+\]/g, " ");
+	return body.replace(/\s+/g, " ").trim();
+}
+function nextChapterUrl(url) {
+	try {
+		const u = new URL(url);
+		const m = u.pathname.match(/^(.*\/chapters\/)(\d+)\/?$/i);
+		if (!m) return null;
+		return `${u.origin}${m[1]}${Number(m[2]) + 1}${u.search}`;
+	} catch {
+		return null;
+	}
+}
+function waitTabComplete(tabId, timeoutMs = 20000) {
+	return new Promise((resolve) => {
+		let done = false;
+		const finish = () => {
+			if (done) return;
+			done = true;
+			chrome.tabs.onUpdated.removeListener(onUp);
+			resolve();
+		};
+		const timer = setTimeout(finish, timeoutMs);
+		function onUp(id, info) {
+			if (id === tabId && info.status === "complete") {
+				clearTimeout(timer);
+				finish();
+			}
+		}
+		chrome.tabs.onUpdated.addListener(onUp);
+		chrome.tabs.get(tabId).then((tab) => {
+			if (tab.status === "complete") {
+				clearTimeout(timer);
+				finish();
+			}
+		}).catch(finish);
+	});
+}
 /** Ask the tab's content script, through the background (see RemotePageController) */
 async function pageControl(tabId, action) {
 	const response = await chrome.runtime.sendMessage({
@@ -23600,16 +23654,25 @@ var Playback = class {
 	}
 	/** Queue one message's chunks. `id` is reported by `onMessage` while it is spoken */
 	say(chunks, id) {
-		if (!chunks.length) return;
+		if (!chunks.length) return Promise.resolve();
+		let settle;
+		const done = new Promise((resolve) => {
+			settle = resolve;
+		});
 		this.#queue.push({
 			chunks,
-			id
+			id,
+			settle
 		});
 		if (!this.#draining) this.#drain();
+		return done;
 	}
 	/** Barge-in / mute: stop now and drop everything queued */
 	stop() {
-		this.#queue.length = 0;
+		while (this.#queue.length) {
+			const item = this.#queue.shift();
+			item?.settle?.();
+		}
 		this.#nonce += 1;
 		const source = this.#source;
 		this.#source = null;
@@ -23647,12 +23710,14 @@ var Playback = class {
 		this.#draining = true;
 		try {
 			while (this.#queue.length) {
-				const { chunks, id } = this.#queue.shift();
+				const { chunks, id, settle } = this.#queue.shift();
 				this.events.onMessage(id ?? null);
 				try {
 					await this.#playMessage(chunks);
 				} catch (error) {
 					this.events.onError(error instanceof Error ? error.message : String(error));
+				} finally {
+					settle?.();
 				}
 			}
 		} finally {
@@ -24919,6 +24984,52 @@ function useCharacter(settings, onVoiceMessage) {
 	const openMicPermission = (0, import_react.useCallback)(() => {
 		chrome.tabs.create({ url: chrome.runtime.getURL("/mic-permission.html") });
 	}, []);
+	const readChapters = (0, import_react.useCallback)(async (count, shouldStop) => {
+		const playback = playbackRef.current;
+		if (!playback) {
+			setNotice("Chưa sẵn sàng TTS.");
+			return;
+		}
+		const n = Math.min(50, Math.max(1, Number(count) || 5));
+		for (let i = 0; i < n; i++) {
+			if (shouldStop?.()) break;
+			const [tab] = await chrome.tabs.query({
+				active: true,
+				currentWindow: true
+			});
+			if (!tab?.id) {
+				setNotice("Không có tab đang mở.");
+				break;
+			}
+			let body = "";
+			for (let retry = 0; retry < 10; retry++) {
+				if (shouldStop?.()) break;
+				try {
+					const state = await pageControl(tab.id, "get_browser_state");
+					body = chapterFromContent(state?.content);
+					if (body.length > 80) break;
+				} catch {}
+				await new Promise((r) => setTimeout(r, 800));
+			}
+			if (shouldStop?.()) break;
+			if (body.length < 80) {
+				setNotice(`Chưa lấy được chữ chương ${i + 1}. Reload tab truyện rồi thử lại.`);
+				break;
+			}
+			setNotice(`Đang đọc chương ${i + 1}/${n}`);
+			await playback.say(toChunks(body, new Set()), { text: `Chương ${i + 1}/${n}` });
+			if (i + 1 >= n || shouldStop?.()) break;
+			const next = nextChapterUrl(tab.url);
+			if (!next) {
+				setNotice("Không tìm thấy chương tiếp (URL cần dạng /chapters/N).");
+				break;
+			}
+			await chrome.tabs.update(tab.id, { url: next });
+			await waitTabComplete(tab.id);
+			await new Promise((r) => setTimeout(r, 1500));
+		}
+		setNotice(null);
+	}, []);
 	return {
 		configured,
 		status,
@@ -24948,7 +25059,8 @@ function useCharacter(settings, onVoiceMessage) {
 			start: startVoice,
 			stop: stopVoice,
 			openMicPermission
-		}
+		},
+		readChapters
 	};
 }
 /** The reason a `show` did not put her on the page, or null if it did */
@@ -63269,6 +63381,8 @@ function App() {
 	const isRunning = status === "running";
 	const canSend = !isRunning || !!pendingQuestion;
 	const { unlockAudio } = character;
+	const [readingChapters, setReadingChapters] = (0, import_react.useState)(false);
+	const readingStopRef = (0, import_react.useRef)(false);
 	const sendMessage = (0, import_react.useCallback)((message, options) => {
 		const text = message.trim();
 		if (!text) return;
@@ -63300,8 +63414,32 @@ function App() {
 	]);
 	const handleStop = (0, import_react.useCallback)(() => {
 		console.log("[SidePanel] Stopping task...");
+		readingStopRef.current = true;
+		character.stopSpeaking();
 		stop();
-	}, [stop]);
+		setReadingChapters(false);
+	}, [stop, character]);
+	const handleReadChapters = (0, import_react.useCallback)(async () => {
+		if (readingChapters) {
+			readingStopRef.current = true;
+			character.stopSpeaking();
+			setReadingChapters(false);
+			return;
+		}
+		const raw = window.prompt("Đọc bao nhiêu chương liên tục (từ chương đang mở)?", "5");
+		if (raw == null) return;
+		const n = Math.min(50, Math.max(1, parseInt(String(raw), 10) || 5));
+		readingStopRef.current = false;
+		setReadingChapters(true);
+		unlockAudio();
+		try {
+			await character.readChapters(n, () => readingStopRef.current);
+		} catch (error) {
+			console.error("[SidePanel] readChapters", error);
+		} finally {
+			setReadingChapters(false);
+		}
+	}, [readingChapters, character, unlockAudio]);
 	const handleKeyDown = (e) => {
 		if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
 			e.preventDefault();
@@ -63464,7 +63602,7 @@ function App() {
 						onChange: (e) => setInputValue(e.target.value),
 						onKeyDown: handleKeyDown,
 						disabled: !canSend,
-						className: cn("text-xs min-h-10", voice.available ? "pr-28" : pendingQuestion ? "pr-20" : "pr-12")
+						className: cn("text-xs min-h-10", voice.available ? "pr-36" : pendingQuestion ? "pr-28" : "pr-20")
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(InputGroupAddon, {
 						align: "inline-end",
 						className: "absolute bottom-0 right-0",
@@ -63489,6 +63627,16 @@ function App() {
 								"aria-label": "Stop task",
 								title: "Stop task",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Square, { className: "size-3" })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupButton, {
+								size: "icon-sm",
+								variant: readingChapters ? "destructive" : "ghost",
+								onClick: handleReadChapters,
+								disabled: isRunning && !readingChapters,
+								className: "size-7 cursor-pointer",
+								"aria-label": readingChapters ? "Dừng đọc chương" : "Đọc nhiều chương liên tục",
+								title: readingChapters ? "Dừng đọc chương" : "Đọc N chương liên tục (TTS chữ trên tab, không qua Codex)",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BookOpen, { className: "size-3.5" })
 							}),
 							canSend && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupButton, {
 								size: "icon-sm",
