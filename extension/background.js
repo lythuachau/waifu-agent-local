@@ -192,6 +192,32 @@ var background = (function() {
 					error: error instanceof Error ? error.message : String(error)
 				}));
 				return true;
+			} else if (message.type === "ZW_FETCH") {
+				const url = String(message.url || "");
+				let parsed;
+				try {
+					parsed = new URL(url);
+				} catch {
+					sendResponse({ ok: false, error: "bad url" });
+					return;
+				}
+				const local = (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost") && parsed.port === "8787" && (parsed.protocol === "http:" || parsed.protocol === "https:");
+				if (!local) {
+					sendResponse({ ok: false, error: "not local api" });
+					return;
+				}
+				fetch(url).then(async (r) => {
+					const buffer = await r.arrayBuffer();
+					sendResponse({
+						ok: r.ok,
+						status: r.status,
+						contentType: r.headers.get("content-type") || "application/octet-stream",
+						buffer
+					});
+				}).catch((error) => {
+					sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) });
+				});
+				return true;
 			} else if (message.type === "AVATAR_EVENT") {
 				return;
 			} else {

@@ -1,6 +1,37 @@
 (function() {
 	if (globalThis.__zwWaifuContentLoaded) return;
 	globalThis.__zwWaifuContentLoaded = true;
+	if (!globalThis.__zwLocalApiFetch) {
+		globalThis.__zwLocalApiFetch = true;
+		const origFetch = globalThis.fetch.bind(globalThis);
+		const localApi = (url) => {
+			try {
+				const u = new URL(String(url), "http://127.0.0.1");
+				return (u.hostname === "127.0.0.1" || u.hostname === "localhost") && u.port === "8787";
+			} catch {
+				return false;
+			}
+		};
+		globalThis.fetch = async function(input, init) {
+			const url = typeof input === "string" ? input : input && input.url;
+			if (!url || !localApi(url) || !globalThis.chrome?.runtime?.sendMessage) return origFetch(input, init);
+			try {
+				const resp = await new Promise((resolve, reject) => {
+					chrome.runtime.sendMessage({ type: "ZW_FETCH", url: String(url) }, (r) => {
+						if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+						else resolve(r);
+					});
+				});
+				if (!resp || resp.buffer == null) return origFetch(input, init);
+				return new Response(resp.buffer, {
+					status: resp.status || (resp.ok ? 200 : 502),
+					headers: { "Content-Type": resp.contentType || "application/octet-stream" }
+				});
+			} catch {
+				return origFetch(input, init);
+			}
+		};
+	}
 	var __vite_style__ = document.createElement("style");
 	__vite_style__.textContent = "._wrapper_1ooyb_1 {\n	position: fixed;\n	inset: 0;\n	z-index: 2147483641; /* 确保在所有元素之上，除了 panel */\n	cursor: wait;\n	overflow: hidden;\n\n	display: none;\n}\n\n._wrapper_1ooyb_1._visible_1ooyb_11 {\n	display: block;\n}\n/* AI 光标样式 */\n._cursor_a9twe_2 {\n	position: absolute;\n	width: var(--cursor-size, 75px);\n	height: var(--cursor-size, 75px);\n	pointer-events: none;\n	z-index: 10000;\n}\n\n._cursorBorder_a9twe_10 {\n	position: absolute;\n	width: 100%;\n	height: 100%;\n	/* ZeroWeight orange */\n	background: linear-gradient(45deg, rgb(232, 168, 115), rgb(201, 125, 67));\n	mask-image: url(\"data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%20fill='none'%3e%3cg%3e%3cpath%20d='M%2015%2042%20L%2015%2036.99%20Q%2015%2031.99%2023.7%2031.99%20L%2028.05%2031.99%20Q%2032.41%2031.99%2032.41%2021.99%20L%2032.41%2017%20Q%2032.41%2012%2041.09%2016.95%20L%2076.31%2037.05%20Q%2085%2042%2076.31%2046.95%20L%2041.09%2067.05%20Q%2032.41%2072%2032.41%2062.01%20L%2032.41%2057.01%20Q%2032.41%2052.01%2023.7%2052.01%20L%2019.35%2052.01%20Q%2015%2052.01%2015%2047.01%20Z'%20fill='none'%20stroke='%23000000'%20stroke-width='6'%20stroke-miterlimit='10'%20style='stroke:%20light-dark(rgb(0,%200,%200),%20rgb(255,%20255,%20255));'/%3e%3c/g%3e%3c/svg%3e\");\n	mask-size: 100% 100%;\n	mask-repeat: no-repeat;\n\n	transform-origin: center;\n	transform: rotate(-135deg) scale(1.2);\n	margin-left: -10px;\n	margin-top: -18px;\n}\n\n._cursorFilling_a9twe_26 {\n	position: absolute;\n	width: 100%;\n	height: 100%;\n	background: url(\"data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3e%3cdefs%3e%3c/defs%3e%3cg%20xmlns='http://www.w3.org/2000/svg'%20style='filter:%20drop-shadow(light-dark(rgba(0,%200,%200,%200.4),%20rgba(237,%20237,%20237,%200.4))%203px%204px%204px);'%3e%3cpath%20d='M%2015%2042%20L%2015%2036.99%20Q%2015%2031.99%2023.7%2031.99%20L%2028.05%2031.99%20Q%2032.41%2031.99%2032.41%2021.99%20L%2032.41%2017%20Q%2032.41%2012%2041.09%2016.95%20L%2076.31%2037.05%20Q%2085%2042%2076.31%2046.95%20L%2041.09%2067.05%20Q%2032.41%2072%2032.41%2062.01%20L%2032.41%2057.01%20Q%2032.41%2052.01%2023.7%2052.01%20L%2019.35%2052.01%20Q%2015%2052.01%2015%2047.01%20Z'%20fill='%23ffffff'%20stroke='none'%20style='fill:%20%23ffffff;'/%3e%3c/g%3e%3c/svg%3e\");\n	background-size: 100% 100%;\n	background-repeat: no-repeat;\n\n	transform-origin: center;\n	transform: rotate(-135deg) scale(1.2);\n	margin-left: -10px;\n	margin-top: -18px;\n}\n\n._cursorRipple_a9twe_40 {\n	position: absolute;\n	width: 100%;\n	height: 100%;\n	pointer-events: none;\n	margin-left: -50%;\n	margin-top: -50%;\n\n	&::after {\n		content: '';\n		opacity: 0;\n		position: absolute;\n		inset: 0;\n		border: 4px solid rgba(218, 146, 83, 1);\n		border-radius: 50%;\n	}\n}\n\n._cursor_a9twe_2._clicking_a9twe_58 ._cursorRipple_a9twe_40::after {\n	animation: _cursor-ripple_a9twe_1 300ms ease-out forwards;\n}\n\n@keyframes _cursor-ripple_a9twe_1 {\n	0% {\n		transform: scale(0);\n		opacity: 1;\n	}\n	100% {\n		transform: scale(2);\n		opacity: 0;\n	}\n}\n/*$vite$:1*/";
 	document.head.appendChild(__vite_style__);
