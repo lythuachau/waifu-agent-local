@@ -1443,10 +1443,15 @@ async def speech_socket(ws: WebSocket, kind: str):
                         asyncio.run_coroutine_threadsafe(q.put(e), loop)
 
                 threading.Thread(target=_produce_vn, daemon=True, name="vieneu-stream").start()
+                st = vieneu_tts.status()
+                cuda = (st.get("device") or "") == "cuda"
                 await ws.send_text(json.dumps({
                     "type": "start",
                     "format": "pcm_f32le",
                     "sample_rate": local_speech.CARTESIA_RATE,
+                    "est_audio_sec": round(max(0.8, len(spoken) / 15.6), 2),
+                    "rtf": 0.22 if cuda else 1.12,
+                    "device": st.get("device") or "",
                 }))
                 vn_ok = True
                 while True:

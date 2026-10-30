@@ -23554,12 +23554,28 @@ var GESTURE_WAIT_MS = 15e3;
 var IDLE_CLOSE_MS = 2e4;
 /** Cartesia's `raw` / `pcm_f32le` default */
 var CARTESIA_SAMPLE_RATE = 44100;
-/** Hold this much generated audio before the playhead starts (covers RTF≈1 stalls). */
-var STREAM_PREROLL_S = 8;
+/** Measured VI: 618 chars → 39.6 s audio */
+var SPEECH_CHARS_PER_SEC = 15.6;
+var PREROLL_MIN_S = 0.25;
+var PREROLL_MAX_S = 14;
+var PREROLL_MARGIN_S = 0.6;
+function estimateSpeechSec(text) {
+	const n = (text || "").replace(/\s+/g, " ").trim().length;
+	return Math.max(0.8, n / SPEECH_CHARS_PER_SEC);
+}
+/** Seconds of PCM to hold before playHead. r<1 → tiny jitter; r>1 → T(r-1)/r + margin. */
+function prerollFromRtf(speechSec, rtf) {
+	const T = Math.max(0.8, speechSec);
+	const r = Math.max(0.12, rtf);
+	if (r <= 0.95) return PREROLL_MIN_S;
+	return Math.min(PREROLL_MAX_S, Math.max(PREROLL_MIN_S, T * (r - 1) / r + PREROLL_MARGIN_S));
+}
 var Playback = class {
 	urls;
 	voice;
 	events;
+	/** EMA of wall/audio from recent utterances (GPU infer ≈ 0.22). */
+	#rtf = 0.25;
 	#context = null;
 	#source = null;
 	#settleActive = null;
@@ -23724,6 +23740,7 @@ var Playback = class {
 		if (!await this.#ensureRunning(context)) throw new Error("The browser blocked her voice: click in the side panel (or press Send) to allow sound.");
 		if (nonce !== this.#nonce) return;
 		const voice = this.voice();
+		const speechSec = estimateSpeechSec(text);
 		return new Promise((resolve) => {
 			let rate = CARTESIA_SAMPLE_RATE;
 			let streamPcm = false;
@@ -23735,6 +23752,10 @@ var Playback = class {
 			let gotAudio = false;
 			let settled = false;
 			let timer = null;
+			let tSend = performance.now();
+			let tFirst = 0;
+			let T = speechSec;
+			let target = prerollFromRtf(T, this.#rtf);
 			const finish = async (legacyFrames) => {
 				if (settled) return;
 				settled = true;
@@ -23815,7 +23836,13 @@ var Playback = class {
 							if (!started) {
 								pending.push(buffer);
 								buffered += buffer.duration;
-								if (buffered >= STREAM_PREROLL_S) beginPlayback();
+								if (!tFirst) tFirst = performance.now();
+								else {
+									const arriveRtf = (performance.now() - tFirst) / 1e3 / Math.max(buffered, 0.01);
+									if (arriveRtf < 0.4) target = Math.min(target, PREROLL_MIN_S);
+									else target = prerollFromRtf(T, Math.max(this.#rtf, arriveRtf));
+								}
+								if (buffered >= target) beginPlayback();
 							} else schedule(buffer);
 						} catch (error) {
 							console.warn("[character/tts] pcm chunk", error);
@@ -23832,6 +23859,12 @@ var Playback = class {
 				if (payload.type === "start" && payload.format === "pcm_f32le") {
 					streamPcm = true;
 					rate = payload.sample_rate || CARTESIA_SAMPLE_RATE;
+					if (payload.est_audio_sec > 0) T = payload.est_audio_sec;
+					const hint = Number(payload.rtf);
+					if (hint > 0) {
+						this.#rtf = this.#rtf * 0.4 + hint * 0.6;
+						target = prerollFromRtf(T, this.#rtf);
+					}
 					bump();
 					return;
 				}
@@ -23841,6 +23874,10 @@ var Playback = class {
 				}
 				if (payload.type === "done") {
 					if (streamPcm) {
+						if (buffered > 0.5) {
+							const meas = (performance.now() - tSend) / 1e3 / buffered;
+							if (meas > 0.05 && meas < 4) this.#rtf = this.#rtf * 0.55 + meas * 0.45;
+						}
 						beginPlayback();
 						const waitPlayhead = () => {
 							if (nonce !== this.#nonce || settled) return finish(null);
