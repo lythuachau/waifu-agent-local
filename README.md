@@ -24,7 +24,7 @@ Animated avatars run fully offline. `offline_pack.py` downloaded the 9 system `.
 - ZeroTTS Python package from `https://github.com/lythuachau/ZeroTTS` (pulled by `start.ps1` via `server/requirements.txt`; not PyPI)
 - An LLM backend:
   - Default brain: **Codex** (`codex login`) for Jev + agent; Ollama then regex if Codex fails
-  - Ollama fallback: `ollama serve` then `ollama pull dolphin-llama3:8b`. Heavier local: `ollama pull qwen2.5:7b` at `/settings`
+  - Ollama fallback: `ollama serve` then `ollama pull llama3.2`. Smarter local: `ollama pull qwen2.5:7b` and pick it at `/settings`
   - Offline: `/settings` → Backend **Ollama only**
   - LM Studio: local server on `http://127.0.0.1:1234/v1`
 
@@ -54,7 +54,7 @@ That builds the image, `docker compose up -d`, and registers scheduled task `Wai
 cd E:\ll\waifu-agent-extract\self-host
 # optional:
 # $env:LLM_BASE_URL = "http://127.0.0.1:11434/v1"
-# $env:LLM_MODEL = "dolphin-llama3:8b"
+# $env:LLM_MODEL = "llama3.2"
 # $env:LLM_API_KEY = "ollama"
 # $env:TTS_VOICE = "ja-JP-NanamiNeural"
 .\start.ps1

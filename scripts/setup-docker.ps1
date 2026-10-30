@@ -130,14 +130,14 @@ docker compose up -d --remove-orphans
 if ($LASTEXITCODE -ne 0) { throw "docker compose up failed" }
 
 if ($useBundled -and -not $SkipOllamaPull) {
-    Write-Step "ollama pull dolphin-llama3:8b (inside waifu-ollama)"
+    Write-Step "ollama pull llama3.2 (inside waifu-ollama)"
     $pullDeadline = (Get-Date).AddMinutes(2)
     while ((Get-Date) -lt $pullDeadline) {
         docker exec waifu-ollama ollama list 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) { break }
         Start-Sleep -Seconds 3
     }
-    docker exec waifu-ollama ollama pull dolphin-llama3:8b
+    docker exec waifu-ollama ollama pull llama3.2
 }
 
 Write-Step "Autostart at Windows logon"

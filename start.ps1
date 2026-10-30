@@ -17,7 +17,7 @@ $env:ZW_LOCAL_HOST = "127.0.0.1"
 $env:ZW_LOCAL_PORT = "8787"
 if (-not $env:LLM_BASE_URL) { $env:LLM_BASE_URL = "http://127.0.0.1:11434/v1" }
 if (-not $env:LLM_API_KEY) { $env:LLM_API_KEY = "ollama" }
-if (-not $env:LLM_MODEL) { $env:LLM_MODEL = "dolphin-llama3:8b" }
+if (-not $env:LLM_MODEL) { $env:LLM_MODEL = "llama3.2" }
 if (-not $env:TTS_VOICE) { $env:TTS_VOICE = "ja-JP-NanamiNeural" }
 if (-not $env:LLM_BACKEND) { $env:LLM_BACKEND = "codex" }
 foreach ($cudaBin in @(

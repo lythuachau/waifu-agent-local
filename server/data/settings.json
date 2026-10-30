@@ -1,6 +1,6 @@
 {
   "llm_backend": "codex",
-  "ollama_model": "dolphin-llama3:8b",
+  "ollama_model": "llama3.2",
   "codex_model": "gpt-6-luna",
   "vision_model": "ocr",
   "default_engine": "vieneu",

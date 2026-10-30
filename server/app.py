@@ -41,7 +41,7 @@ PUBLIC = os.environ.get("ZW_PUBLIC_BASE", f"http://{_pub_host}:{PORT}").rstrip("
 WS_PUBLIC = PUBLIC.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
 LLM_BASE = os.environ.get("LLM_BASE_URL", "http://127.0.0.1:11434/v1").rstrip("/")
 LLM_KEY = os.environ.get("LLM_API_KEY", "ollama")
-LLM_MODEL = os.environ.get("LLM_MODEL", "dolphin-llama3:8b")
+LLM_MODEL = os.environ.get("LLM_MODEL", "llama3.2")
 VISION_MODEL = os.environ.get("VISION_MODEL", LLM_MODEL)
 TTS_VOICE = os.environ.get("TTS_VOICE", "ja-JP-NanamiNeural")
 SETTINGS_PATH = DATA / "settings.json"
@@ -59,7 +59,7 @@ VISION_HINTS = (
 )
 DEFAULT_SETTINGS = {
     "llm_backend": "codex",
-    "ollama_model": "dolphin-llama3:8b",
+    "ollama_model": "llama3.2",
     "codex_model": "gpt-6-luna",
     "vision_model": "ocr",
     "default_engine": "auto",

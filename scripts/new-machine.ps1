@@ -29,7 +29,7 @@ if (Test-Path "E:\ll\cuda13-runtime\bin") {
 }
 
 Write-Host "Next:"
-Write-Host "  1. ollama serve && ollama pull dolphin-llama3:8b"
+Write-Host "  1. ollama serve && ollama pull llama3.2"
 Write-Host "  2. optional: ollama pull llava   (heavy vision)"
 Write-Host "  3. optional: codex login"
 Write-Host "  4. .\start.ps1"

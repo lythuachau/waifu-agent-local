@@ -23466,19 +23466,6 @@ function pageText(state) {
 	if (content.replace(/\[\d+\]|<[^>]*>/g, " ").replace(/\s+/g, " ").trim().length < MIN_TEXT_CHARS) return null;
 	return content.length > MAX_TEXT_CHARS ? `${content.slice(0, MAX_TEXT_CHARS)}\n…` : content;
 }
-function wantsReadChapter(message) {
-	const t = typeof message === "string" ? message : String(message?.text || message?.content || "");
-	return /đọc\s*(hết\s*)?(chương|truyện|novel)|đọc\s*(từ\s*)?đầu|đọc\s*giúp|đọc\s*toàn\s*bộ|đọc\s*nội\s*dung|read\s+(me\s+)?(the\s+)?(chapter|novel|page)\b/i.test(t);
-}
-function chapterFromScreen(screen) {
-	const raw = String(screen?.text || "");
-	const mark = "[Canvas fillText]";
-	let body = raw.includes(mark) ? raw.slice(raw.indexOf(mark) + mark.length) : raw;
-	body = body.replace(/\[Start of page\]|\[End of page\]/g, " ");
-	body = body.replace(/Interactive elements[\s\S]*$/i, " ");
-	body = body.replace(/<[^>]+>/g, " ").replace(/\[\d+\]/g, " ");
-	return body.replace(/\s+/g, " ").trim();
-}
 /** Ask the tab's content script, through the background (see RemotePageController) */
 async function pageControl(tabId, action) {
 	const response = await chrome.runtime.sendMessage({
@@ -24875,33 +24862,11 @@ function useCharacter(settings, onVoiceMessage) {
 		ready,
 		chat: async (exchanges, message, { chatId, aboutPage, previousUrl }) => {
 			const context = await withMemory(chatId);
-			const askRead = wantsReadChapter(message);
 			const screen = await readScreen({
 				apiKey: zwApiKey ?? "",
-				lookAtPage: aboutPage || askRead,
+				lookAtPage: aboutPage,
 				previousUrl
 			});
-			if (askRead) {
-				const chapter = chapterFromScreen(screen);
-				const reply = chapter.length > 80 ? {
-					emotion: "content",
-					messages: [{
-						text: "Mình đọc chương đang mở, từ đầu đến hết.",
-						tts_text: chapter
-					}]
-				} : {
-					emotion: "sad",
-					messages: [{
-						text: "Chưa lấy được chữ chương. Reload tab truyện rồi bảo mình đọc lại (hook canvas phải chạy trước khi trang vẽ chữ).",
-						tts_text: "Chưa lấy được chữ chương. Reload tab rồi bảo mình đọc lại."
-					}]
-				};
-				keepInMemory(chatId, message, reply);
-				return {
-					reply,
-					pageUrl: screen?.url || void 0
-				};
-			}
 			const reply = await chatReply(context, exchanges, message, screen);
 			keepInMemory(chatId, message, reply);
 			return {
@@ -28903,7 +28868,7 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 		const persona = (c.personas || []).find((p) => p.avatar_id === (config?.avatarId ?? ""));
 		setLocalRec({
 			llm_backend: s.llm_backend || "codex",
-			ollama_model: s.ollama_model || "dolphin-llama3:8b",
+			ollama_model: s.ollama_model || "llama3.2",
 			codex_model: s.codex_model || "",
 			vision_model: s.vision_model || "ocr",
 			default_engine: s.default_engine || "auto",
