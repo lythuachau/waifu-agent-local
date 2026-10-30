@@ -2933,10 +2933,11 @@ gl_Position = vec4(aPosition, 0.0, 1.0);
 			await this.updateTree();
 			let content = this.simplifiedHTML;
 			try {
-				const ocr = await ocrAntiCopyCanvases();
-				if (ocr) content = `${content}\n\n[Anti-copy canvas OCR]\n${ocr}`;
+				const dump = document.getElementById("zw-canvas-text-dump");
+				const drawn = (dump?.textContent || "").trim();
+				if (drawn.length > 20) content = `${content}\n\n[Canvas fillText]\n${drawn}`;
 			} catch (error) {
-				console.warn("[page] anti-copy OCR", error);
+				console.warn("[page] canvas text dump", error);
 			}
 			return {
 				url,

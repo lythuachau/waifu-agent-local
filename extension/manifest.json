@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Waifu Agent (local)",
   "description": "__MSG_extDescription__",
-  "version": "1.0.4.33",
+  "version": "1.0.4.34",
   "icons": {
     "16": "assets/waifu-agent-16.png",
     "32": "assets/waifu-agent-32.png",
@@ -52,6 +52,16 @@
     "service_worker": "background.js"
   },
   "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "js": [
+        "page-text-hook.js"
+      ]
+    },
     {
       "matches": [
         "<all_urls>"
