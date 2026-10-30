@@ -23485,6 +23485,139 @@ function chapterFromContent(content) {
 	body = body.replace(/<[^>]+>/g, " ").replace(/\[\d+\]/g, " ");
 	return body.replace(/\s+/g, " ").trim();
 }
+function collapseWs(s) {
+	return String(s || "").replace(/\s+/g, " ").trim();
+}
+function chapterNumFromUrl(url) {
+	const m = String(url || "").match(/\/chapters\/(\d+)/i);
+	return m ? Number(m[1]) : null;
+}
+function parseLocateJson(text) {
+	const raw = String(text || "").trim();
+	const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+	const src = fence ? fence[1].trim() : raw;
+	const tryParse = (s) => {
+		try {
+			const v = JSON.parse(s);
+			if (v && typeof v.title === "string" && typeof v.start === "string" && typeof v.end === "string") {
+				return {
+					title: collapseWs(v.title),
+					start: collapseWs(v.start),
+					end: collapseWs(v.end)
+				};
+			}
+		} catch {}
+		return null;
+	};
+	const direct = tryParse(src);
+	if (direct) return direct;
+	const a = src.indexOf("{");
+	const b = src.lastIndexOf("}");
+	if (a >= 0 && b > a) return tryParse(src.slice(a, b + 1));
+	return null;
+}
+function indexOfNeedle(hay, needle, from) {
+	const n = collapseWs(needle);
+	if (n.length < 12) return -1;
+	const i = hay.indexOf(n, from || 0);
+	if (i >= 0) return i;
+	if (n.length > 40) return hay.indexOf(n.slice(0, 40), from || 0);
+	return -1;
+}
+function proseLenAfter(hay, index, skip) {
+	let s = hay.slice(index + skip).trim();
+	s = s.replace(/^(?:Chương\s*\d+\s*[:.]?\s*)+/i, "");
+	return s.length;
+}
+function pickTitleIndex(hay, title) {
+	let n = collapseWs(title);
+	if (n.length < 4) return -1;
+	const collect = (needle) => {
+		const hits = [];
+		let from = 0;
+		while (from < hay.length) {
+			const i = hay.indexOf(needle, from);
+			if (i < 0) break;
+			hits.push(i);
+			from = i + Math.max(1, needle.length);
+		}
+		return hits;
+	};
+	let hits = collect(n);
+	if (!hits.length) {
+		const m = n.match(/^Chương\s*\d+\s*[:.]?/);
+		if (m && m[0].length >= 4) {
+			n = m[0];
+			hits = collect(n);
+		}
+	}
+	if (!hits.length) return -1;
+	let best = hits[0];
+	let bestProse = -1;
+	for (const i of hits) {
+		const p = proseLenAfter(hay, i, n.length);
+		if (p > bestProse) {
+			bestProse = p;
+			best = i;
+		}
+	}
+	return best;
+}
+function sliceChapterDump(dump, loc) {
+	const hay = collapseWs(dump);
+	if (!hay || !loc) return "";
+	const titleIdx = pickTitleIndex(hay, loc.title);
+	if (titleIdx < 0) return "";
+	const startIdx = indexOfNeedle(hay, loc.start, titleIdx);
+	if (startIdx < 0) return "";
+	const endNeedle = collapseWs(loc.end);
+	if (endNeedle.length < 12) return "";
+	const endIdx = hay.indexOf(endNeedle, startIdx);
+	if (endIdx < 0) {
+		const shortEnd = endNeedle.length > 40 ? hay.indexOf(endNeedle.slice(0, 40), startIdx) : -1;
+		if (shortEnd < 0) return "";
+		const sliced = hay.slice(startIdx, shortEnd + Math.min(40, endNeedle.length)).trim();
+		return sliced.length >= 80 ? sliced : "";
+	}
+	const sliced = hay.slice(startIdx, endIdx + endNeedle.length).trim();
+	return sliced.length >= 80 ? sliced : "";
+}
+var CHAPTER_LOCATE_SYSTEM = "You are a screen-reader locator. The user is reading text already visible on their own screen. Identify the CURRENT chapter in the dump.\nReturn ONLY a JSON object, no markdown:\n{\"title\":\"...\",\"start\":\"...\",\"end\":\"...\"}\nRules:\n- title: exact heading of THIS chapter copied from the dump (match the given chapter number). Not a tab, TOC row, date, calendar, or another chapter.\n- start: exact opening of THIS chapter's BODY after the title. Skip dates, chapter lists, comments, and unrelated lines under the title. Copy a unique 20-80 character span verbatim from the dump.\n- end: exact closing of THIS chapter's body. Copy a unique 20-80 character span verbatim. Not next-chapter UI.\n- Every value MUST be a verbatim substring of the dump.\n- Do not retell, summarize, or output the full chapter.";
+async function locateChapter(dump, url) {
+	const hay = collapseWs(dump);
+	if (hay.length < 80) throw new Error("Dump chương quá ngắn để não ghim mốc.");
+	const num = chapterNumFromUrl(url);
+	const hint = num != null ? `This page is chapter ${num}. title must be this chapter, not ${Math.max(0, num - 1)} or ${num + 1}.\n` : "";
+	const response = await fetch(`${ZEROWEIGHT_API}/codex/chat/completions`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			model: "gpt-6-luna",
+			temperature: 0,
+			messages: [{
+				role: "system",
+				content: CHAPTER_LOCATE_SYSTEM
+			}, {
+				role: "user",
+				content: `${hint}URL: ${url || ""}\nPage dump:\n${hay}`
+			}]
+		}),
+		signal: AbortSignal.timeout(12e4)
+	});
+	const data = await response.json().catch(() => null);
+	if (!response.ok) {
+		const msg = data?.error?.message || response.statusText || `HTTP ${response.status}`;
+		throw new Error(`Não không ghim được mốc: ${msg}`);
+	}
+	let text = data?.choices?.[0]?.message?.content;
+	if (Array.isArray(text)) text = text.map((p) => typeof p === "string" ? p : p?.text || "").join("");
+	const loc = parseLocateJson(typeof text === "string" ? text : "");
+	if (!loc) throw new Error("Não không trả JSON title/start/end.");
+	const sliced = sliceChapterDump(hay, loc);
+	if (!sliced) throw new Error("Não ghim mốc nhưng không khớp dump (title/start/end).");
+	console.log(`[readChapters] locate title=${JSON.stringify(loc.title).slice(0, 80)} chars=${sliced.length}`);
+	return sliced;
+}
 function nextChapterUrl(url) {
 	try {
 		const u = new URL(url);
@@ -25180,16 +25313,27 @@ function useCharacter(settings, onVoiceMessage) {
 				setNotice(`Chưa lấy được chữ chương ${i + 1}. Reload tab truyện rồi thử lại.`);
 				break;
 			}
+			const alreadySliced = prepared?.index === i;
+			let spoken = body;
+			if (!alreadySliced) {
+				setNotice(`Não đang ghim mốc chương ${i + 1}/${n}`);
+				try {
+					spoken = await locateChapter(body, tab.url);
+				} catch (error) {
+					setNotice(error instanceof Error ? error.message : "Não không ghim được mốc chương. Dừng.");
+					break;
+				}
+			}
 			setNotice(`Đang đọc chương ${i + 1}/${n}`);
 			const id = { text: `Chương ${i + 1}/${n}` };
 			let playing;
-			if (prepared?.index === i) {
+			if (alreadySliced) {
 				const buf = await prepared.buffer;
 				prepared = null;
 				if (shouldStop?.()) break;
-				playing = buf ? playback.playPrepared(buf, id) : playback.say(toChunks(body, new Set()), id);
+				playing = buf ? playback.playPrepared(buf, id) : playback.say(toChunks(spoken, new Set()), id);
 			} else {
-				playing = playback.say(toChunks(body, new Set()), id);
+				playing = playback.say(toChunks(spoken, new Set()), id);
 			}
 			if (i + 1 >= n || shouldStop?.()) {
 				await playing;
@@ -25224,9 +25368,22 @@ function useCharacter(settings, onVoiceMessage) {
 					setNotice(`Chưa lấy được chữ chương ${i + 2}. Dừng.`);
 					break;
 				}
+				setNotice(`Não đang ghim mốc chương ${i + 2}/${n}`);
+				try {
+					const sliced = await locateChapter(pendingBody, next);
+					prepared = {
+						index: i + 1,
+						buffer: Promise.resolve(null),
+						body: sliced
+					};
+					pendingBody = "";
+				} catch (error) {
+					setNotice(error instanceof Error ? error.message : "Não không ghim được mốc chương tiếp. Dừng.");
+					break;
+				}
 				continue;
 			}
-			setNotice(`Còn ~${Math.round(left)}s — chuẩn bị chương ${i + 2}/${n}`);
+			setNotice(`Còn ~${Math.round(left)}s — não ghim chương ${i + 2}/${n}`);
 			try {
 				await openNext(tab.id, next);
 			} catch (error) {
@@ -25244,18 +25401,30 @@ function useCharacter(settings, onVoiceMessage) {
 				setNotice(`Chưa lấy được chữ chương ${i + 2}. Dừng.`);
 				break;
 			}
+			let slicedNext = "";
+			try {
+				slicedNext = await locateChapter(nextBody, next);
+			} catch (error) {
+				await playing;
+				setNotice(error instanceof Error ? error.message : "Não không ghim được mốc chương tiếp. Dừng.");
+				break;
+			}
 			const stillLeft = playback.remaining();
-			const inferNeed = playback.estimateInferSec(nextBody);
+			const inferNeed = playback.estimateInferSec(slicedNext);
 			if (stillLeft <= PREFETCH_SKIP_TAIL_S) {
-				pendingBody = nextBody;
+				prepared = {
+					index: i + 1,
+					buffer: Promise.resolve(null),
+					body: slicedNext
+				};
 				await playing;
 				continue;
 			}
 			console.log(`[readChapters] prefetch ch${i + 2} left=${stillLeft.toFixed(1)}s dur=${dur.toFixed(1)}s infer~${inferNeed.toFixed(1)}s`);
 			prepared = {
 				index: i + 1,
-				buffer: playback.prepare(nextBody),
-				body: nextBody
+				buffer: playback.prepare(slicedNext),
+				body: slicedNext
 			};
 			if (stillLeft < inferNeed) setNotice(`Đang tạo TTS chương ${i + 2} (infer ~${Math.ceil(inferNeed)}s)...`);
 			await playing;
