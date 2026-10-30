@@ -23495,29 +23495,36 @@ function nextChapterUrl(url) {
 		return null;
 	}
 }
-function waitTabComplete(tabId, timeoutMs = 20000) {
-	return new Promise((resolve) => {
+function waitTabUrl(tabId, wantUrl, timeoutMs = 25000) {
+	const want = String(wantUrl || "").split("#")[0];
+	return new Promise((resolve, reject) => {
 		let done = false;
-		const finish = () => {
+		const finish = (ok) => {
 			if (done) return;
 			done = true;
 			chrome.tabs.onUpdated.removeListener(onUp);
-			resolve();
+			if (ok) resolve();
+			else reject(new Error("Tab did not reach the next chapter URL."));
 		};
-		const timer = setTimeout(finish, timeoutMs);
-		function onUp(id, info) {
-			if (id === tabId && info.status === "complete") {
+		const matches = (tab) => {
+			const u = String(tab?.url || tab?.pendingUrl || "").split("#")[0];
+			return !!want && (u === want || u.startsWith(want));
+		};
+		const timer = setTimeout(() => finish(false), timeoutMs);
+		function onUp(id, info, tab) {
+			if (id !== tabId) return;
+			if (matches(tab) && (info.status === "complete" || tab.status === "complete")) {
 				clearTimeout(timer);
-				finish();
+				finish(true);
 			}
 		}
 		chrome.tabs.onUpdated.addListener(onUp);
 		chrome.tabs.get(tabId).then((tab) => {
-			if (tab.status === "complete") {
+			if (matches(tab) && tab.status === "complete") {
 				clearTimeout(timer);
-				finish();
+				finish(true);
 			}
-		}).catch(finish);
+		}).catch(() => finish(false));
 	});
 }
 /** Ask the tab's content script, through the background (see RemotePageController) */
@@ -23815,6 +23822,7 @@ var Playback = class {
 			let started = false;
 			let playHead = 0;
 			let gotAudio = false;
+			let lastSource = null;
 			let settled = false;
 			let timer = null;
 			let tSend = performance.now();
@@ -23881,6 +23889,7 @@ var Playback = class {
 				}
 				playHead = startAt + Math.max(0, buffer.duration - offset);
 				this.#source = source;
+				lastSource = source;
 			};
 			const beginPlayback = () => {
 				if (started || settled) return;
@@ -23948,8 +23957,20 @@ var Playback = class {
 							if (nonce !== this.#nonce || settled) return finish(null);
 							if (context.state !== "running") context.resume().catch(() => {});
 							const remain = playHead - context.currentTime;
-							if (remain > 0.05) {
-								setTimeout(waitPlayhead, Math.min(Math.max(remain * 1e3, 40), 250));
+							if (remain > 0.12) {
+								setTimeout(waitPlayhead, Math.min(Math.max(remain * 1e3, 80), 400));
+								return;
+							}
+							const src = lastSource;
+							if (src) {
+								let ended = false;
+								const end = () => {
+									if (ended) return;
+									ended = true;
+									finish(null);
+								};
+								src.onended = end;
+								setTimeout(end, 2500);
 								return;
 							}
 							finish(null);
@@ -24991,6 +25012,7 @@ function useCharacter(settings, onVoiceMessage) {
 			return;
 		}
 		const n = Math.min(50, Math.max(1, Number(count) || 5));
+		let pendingBody = "";
 		for (let i = 0; i < n; i++) {
 			if (shouldStop?.()) break;
 			const [tab] = await chrome.tabs.query({
@@ -25001,15 +25023,18 @@ function useCharacter(settings, onVoiceMessage) {
 				setNotice("Không có tab đang mở.");
 				break;
 			}
-			let body = "";
-			for (let retry = 0; retry < 10; retry++) {
-				if (shouldStop?.()) break;
-				try {
-					const state = await pageControl(tab.id, "get_browser_state");
-					body = chapterFromContent(state?.content);
-					if (body.length > 80) break;
-				} catch {}
-				await new Promise((r) => setTimeout(r, 800));
+			let body = pendingBody;
+			pendingBody = "";
+			if (!body) {
+				for (let retry = 0; retry < 10; retry++) {
+					if (shouldStop?.()) break;
+					try {
+						const state = await pageControl(tab.id, "get_browser_state");
+						body = chapterFromContent(state?.content);
+						if (body.length > 80) break;
+					} catch {}
+					await new Promise((r) => setTimeout(r, 800));
+				}
 			}
 			if (shouldStop?.()) break;
 			if (body.length < 80) {
@@ -25024,9 +25049,31 @@ function useCharacter(settings, onVoiceMessage) {
 				setNotice("Không tìm thấy chương tiếp (URL cần dạng /chapters/N).");
 				break;
 			}
+			const prevHead = body.slice(0, 120);
 			await chrome.tabs.update(tab.id, { url: next });
-			await waitTabComplete(tab.id);
-			await new Promise((r) => setTimeout(r, 1500));
+			try {
+				await waitTabUrl(tab.id, next);
+			} catch (error) {
+				setNotice(error instanceof Error ? error.message : "Không mở được chương tiếp.");
+				break;
+			}
+			for (let retry = 0; retry < 12; retry++) {
+				if (shouldStop?.()) break;
+				await new Promise((r) => setTimeout(r, 700));
+				try {
+					const state = await pageControl(tab.id, "get_browser_state");
+					const nextBody = chapterFromContent(state?.content);
+					if (nextBody.length > 80 && nextBody.slice(0, 120) !== prevHead) {
+						pendingBody = nextBody;
+						break;
+					}
+				} catch {}
+			}
+			if (shouldStop?.()) break;
+			if (!pendingBody) {
+				setNotice(`Chưa lấy được chữ chương ${i + 2}. Dừng.`);
+				break;
+			}
 		}
 		setNotice(null);
 	}, []);
