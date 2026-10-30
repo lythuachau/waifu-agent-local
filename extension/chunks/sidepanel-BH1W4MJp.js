@@ -23759,13 +23759,22 @@ var Playback = class {
 					this.events.onAudio(true);
 					gotAudio = true;
 				}
-				const startAt = Math.max(playHead, now);
+				let startAt = playHead;
+				let offset = 0;
+				if (startAt < now) {
+					offset = now - startAt;
+					if (offset >= buffer.duration - 0.01) {
+						playHead = now;
+						return;
+					}
+					startAt = now;
+				}
 				try {
-					source.start(startAt);
+					source.start(startAt, offset);
 				} catch {
 					return;
 				}
-				playHead = startAt + buffer.duration;
+				playHead = startAt + Math.max(0, buffer.duration - offset);
 				this.#source = source;
 			};
 			ws.onmessage = (event) => {
