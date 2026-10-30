@@ -23726,8 +23726,6 @@ var Playback = class {
 			let rate = CARTESIA_SAMPLE_RATE;
 			let streamPcm = false;
 			let collected = [];
-			let playHead = 0;
-			let gotAudio = false;
 			let settled = false;
 			let timer = null;
 			const finish = async (legacyFrames) => {
@@ -23738,14 +23736,13 @@ var Playback = class {
 				if (legacyFrames && legacyFrames.length) {
 					try {
 						const bytes = concat(legacyFrames);
-						const buffer = voice.provider === "cartesia" ? pcmF32ToBuffer(context, bytes, CARTESIA_SAMPLE_RATE) : await context.decodeAudioData(bytes.slice(0));
+						const buffer = streamPcm || voice.provider === "cartesia" ? pcmF32ToBuffer(context, bytes, rate || CARTESIA_SAMPLE_RATE) : await context.decodeAudioData(bytes.slice(0));
 						if (buffer && nonce === this.#nonce) await this.#playOne(buffer, nonce);
 					} catch (error) {
 						this.events.onError(`Could not decode the audio (${voice.provider}).`);
 						console.warn("[character/tts] decode failed", error);
 					}
 				}
-				if (gotAudio) this.events.onAudio(false);
 				resolve();
 			};
 			const bump = () => {
@@ -23756,43 +23753,6 @@ var Playback = class {
 					finish(collected.length ? collected : null);
 				}, CHUNK_TIMEOUT_MS);
 			};
-			const schedule = (buffer) => {
-				if (nonce !== this.#nonce || settled || !buffer || buffer.length < 32) return;
-				if (context.state !== "running") context.resume().catch(() => {});
-				const source = context.createBufferSource();
-				source.buffer = buffer;
-				source.connect(context.destination);
-				const now = context.currentTime;
-				if (!gotAudio) {
-					playHead = now + 0.04;
-					this.events.onAudio(true);
-					gotAudio = true;
-				}
-				let startAt = playHead;
-				let offset = 0;
-				if (startAt < now) {
-					offset = now - startAt;
-					if (offset >= buffer.duration - 0.01) {
-						offset = 0;
-						startAt = now;
-					} else {
-						startAt = now;
-					}
-				}
-				try {
-					source.start(startAt, offset);
-				} catch {
-					try {
-						source.start(now);
-						offset = 0;
-						startAt = now;
-					} catch {
-						return;
-					}
-				}
-				playHead = startAt + Math.max(0, buffer.duration - offset);
-				this.#source = source;
-			};
 			ws.onmessage = (event) => {
 				if (nonce !== this.#nonce) {
 					finish(null);
@@ -23800,13 +23760,7 @@ var Playback = class {
 				}
 				if (typeof event.data !== "string") {
 					bump();
-					if (streamPcm) {
-						try {
-							schedule(pcmF32ToBuffer(context, event.data, rate));
-						} catch (error) {
-							console.warn("[character/tts] pcm chunk", error);
-						}
-					} else collected.push(event.data);
+					collected.push(event.data);
 					return;
 				}
 				let payload;
@@ -23826,19 +23780,7 @@ var Playback = class {
 					return;
 				}
 				if (payload.type === "done") {
-					if (streamPcm) {
-						const waitPlayhead = () => {
-							if (nonce !== this.#nonce || settled) return finish(null);
-							if (context.state !== "running") context.resume().catch(() => {});
-							const remain = playHead - context.currentTime;
-							if (remain > 0.05) {
-								setTimeout(waitPlayhead, Math.min(Math.max(remain * 1e3, 40), 250));
-								return;
-							}
-							finish(null);
-						};
-						waitPlayhead();
-					} else finish(collected.length ? collected : null);
+					finish(collected.length ? collected : null);
 					return;
 				}
 				if (payload.type === "error") {
