@@ -13,21 +13,22 @@ if (!globalThis.__zwLocalApiFetch) {
 	};
 	globalThis.fetch = async function(input, init) {
 		const url = typeof input === "string" ? input : input && input.url;
-		if (!url || !localApi(url) || !globalThis.chrome?.runtime?.sendMessage) return origFetch(input, init);
+		if (!url || !localApi(url)) return origFetch(input, init);
 		try {
+			return await origFetch(input, init);
+		} catch (directErr) {
+			if (!globalThis.chrome?.runtime?.sendMessage) throw directErr;
 			const resp = await new Promise((resolve, reject) => {
 				chrome.runtime.sendMessage({ type: "ZW_FETCH", url: String(url) }, (r) => {
 					if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
 					else resolve(r);
 				});
 			});
-			if (!resp || resp.buffer == null) return origFetch(input, init);
+			if (!resp || resp.buffer == null) throw directErr;
 			return new Response(resp.buffer, {
 				status: resp.status || (resp.ok ? 200 : 502),
 				headers: { "Content-Type": resp.contentType || "application/octet-stream" }
 			});
-		} catch {
-			return origFetch(input, init);
 		}
 	};
 }
