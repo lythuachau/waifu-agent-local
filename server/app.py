@@ -37,7 +37,8 @@ STATIC = ROOT / "static"
 HOST = os.environ.get("ZW_LOCAL_HOST", "127.0.0.1")
 PORT = int(os.environ.get("ZW_LOCAL_PORT", "8787"))
 _pub_host = "127.0.0.1" if HOST in ("0.0.0.0", "::", "[::]") else HOST
-PUBLIC = os.environ.get("ZW_PUBLIC_BASE", f"http://{_pub_host}:{PORT}")
+PUBLIC = os.environ.get("ZW_PUBLIC_BASE", f"http://{_pub_host}:{PORT}").rstrip("/")
+WS_PUBLIC = PUBLIC.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
 LLM_BASE = os.environ.get("LLM_BASE_URL", "http://127.0.0.1:11434/v1").rstrip("/")
 LLM_KEY = os.environ.get("LLM_API_KEY", "ollama")
 LLM_MODEL = os.environ.get("LLM_MODEL", "llama3.2")
@@ -1325,7 +1326,8 @@ async def mint_speech(body: dict | None = None):
     qs = ""
     if kind == "stt" and body.get("language"):
         qs = f"?language={body['language']}"
-    url = f"ws://{HOST}:{PORT}/speech/{kind}{qs}"
+    # HOST may be 0.0.0.0 inside Docker; Chrome must open the published address.
+    url = f"{WS_PUBLIC}/speech/{kind}{qs}"
     return {
         "url": url,
         "kind": kind,
