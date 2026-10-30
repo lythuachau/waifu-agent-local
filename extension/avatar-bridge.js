@@ -6,7 +6,8 @@
  *
  * This file:
  *   1. Injects content-scripts/content.js on demand (scripting permission).
- *   2. Opens http://127.0.0.1:8787/stage when the active tab cannot host her.
+ *   2. Opens http://127.0.0.1:8787/stage when the active tab cannot host her,
+ *      except chrome://extensions (Manage extension stays on that page).
  *   3. Always mounts a preview of her inside the side panel so she is visible
  *      even while the user is still on chrome://extensions.
  */
@@ -17,6 +18,10 @@
 		if (!url) return true;
 		return /^(chrome|edge|devtools|chrome-extension|about|brave|opera|vivaldi):/i.test(url)
 			|| /chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(url);
+	}
+
+	function isExtensionsManager(url) {
+		return /^(chrome|edge):\/\/extensions(\/|$|\?)/i.test(url || "");
 	}
 
 	function isNewTab(url) {
@@ -141,7 +146,7 @@
 
 		const url = tab.url || tab.pendingUrl || "";
 		if (restricted(url)) {
-			if (!message || message.action !== "show") {
+			if (!message || message.action !== "show" || isExtensionsManager(url)) {
 				return { ok: true, panel: true };
 			}
 			let stage;
