@@ -25123,9 +25123,10 @@ function useCharacter(settings, onVoiceMessage) {
 				action: "hide"
 			});
 		};
-		const showOn = async (tabId) => {
+		const canHost = (tab) => /^https?:/i.test(tab?.url || "") && !/chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(tab.url || "");
+		const showOn = async (tabId, opts = {}) => {
 			if (disposed) return;
-			if (shownTabRef.current !== tabId) hideShown();
+			if (!opts.keepOthers && shownTabRef.current != null && shownTabRef.current !== tabId) hideShown();
 			shownTabRef.current = tabId;
 			const bundle = bundleRef.current;
 			if (bundle && Date.now() - bundle.fetchedAt >= 15e5) {
@@ -25143,6 +25144,7 @@ function useCharacter(settings, onVoiceMessage) {
 			else if (shownTabRef.current !== tabId) return;
 			setPageIssue(describeShowFailure(response));
 			sendAvatarState();
+			if (opts.keepOthers) return;
 			try {
 				const liveId = shownTabRef.current;
 				if (!keepAliveRef.current && liveId != null) keepAliveRef.current = chrome.tabs.connect(liveId, { name: "avatar-keepalive" });
@@ -25150,21 +25152,39 @@ function useCharacter(settings, onVoiceMessage) {
 		};
 		const showActive = async () => {
 			windowId ??= (await chrome.windows.getCurrent()).id;
-			const [tab] = await chrome.tabs.query({
+			const tabs = await chrome.tabs.query({ windowId });
+			const hosts = tabs.filter((t) => t.id != null && canHost(t));
+			const [active] = await chrome.tabs.query({
 				active: true,
 				windowId
 			});
-			if (tab?.id != null) await showOn(tab.id);
+			if (active?.id != null && canHost(active)) {
+				await showOn(active.id);
+				return;
+			}
+			for (const t of hosts) await showOn(t.id, { keepOthers: true });
+			if (hosts[0]?.id != null) {
+				shownTabRef.current = hosts[0].id;
+				try {
+					keepAliveRef.current = chrome.tabs.connect(hosts[0].id, { name: "avatar-keepalive" });
+				} catch {}
+			}
 		};
 		const onActivated = (info) => {
-			if (info.windowId === windowId) showOn(info.tabId);
+			if (info.windowId !== windowId) return;
+			void chrome.tabs.get(info.tabId).then((tab) => {
+				if (canHost(tab)) showOn(tab.id);
+			}).catch(() => {});
 		};
 		const onUpdated = (tabId, change, tab) => {
-			if (change.status === "complete" && tab.active && tab.windowId === windowId) {
+			if (change.status !== "complete" || tab.windowId !== windowId || !canHost(tab)) return;
+			if (tab.active) {
 				keepAliveRef.current = null;
 				shownTabRef.current = null;
 				showOn(tabId);
+				return;
 			}
+			showOn(tabId, { keepOthers: true });
 		};
 		chrome.tabs.onActivated.addListener(onActivated);
 		chrome.tabs.onUpdated.addListener(onUpdated);
