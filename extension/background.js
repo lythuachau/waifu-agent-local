@@ -271,7 +271,8 @@ var background = (function() {
 			if (!prefs.avatarVisible || !prefs.avatarAlwaysOn) return;
 			const payload = rec.avatarOverlayCache && rec.avatarOverlayCache.payload;
 			if (!payload || tabId == null) return;
-			const msg = { type: "AVATAR", action: "show", payload };
+			const state = rec.avatarOverlayCache.state || "listening";
+			const msg = { type: "AVATAR", action: "show", payload, state };
 			try {
 				await chrome.tabs.sendMessage(tabId, msg);
 			} catch {

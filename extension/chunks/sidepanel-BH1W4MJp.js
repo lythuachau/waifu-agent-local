@@ -25019,16 +25019,45 @@ function useCharacter(settings, onVoiceMessage) {
 	const shownTabRef = (0, import_react.useRef)(null);
 	const keepAliveRef = (0, import_react.useRef)(null);
 	const sendToAvatar = (0, import_react.useCallback)(async (message) => {
-		const tabId = shownTabRef.current;
+		let tabId = shownTabRef.current;
+		if (tabId == null) {
+			const [tab] = await chrome.tabs.query({
+				active: true,
+				currentWindow: true
+			});
+			tabId = tab?.id ?? null;
+		}
 		if (tabId == null) return null;
 		return zwSendAvatar(tabId, message);
 	}, []);
 	/** Her speaking/listening state, from the audio (see ./avatarState); re-sent on a heartbeat */
 	const avatarStateRef = (0, import_react.useRef)("listening");
-	const sendAvatarState = (0, import_react.useCallback)(() => void sendToAvatar({
-		action: "state",
-		state: avatarStateRef.current
-	}), [sendToAvatar]);
+	const sendAvatarState = (0, import_react.useCallback)(() => {
+		const state = avatarStateRef.current;
+		const msg = {
+			action: "state",
+			state
+		};
+		chrome.storage.local.get(OVERLAY_CACHE_KEY).then((r) => {
+			const prev = r[OVERLAY_CACHE_KEY];
+			if (prev && prev.payload) chrome.storage.local.set({
+				[OVERLAY_CACHE_KEY]: {
+					...prev,
+					state
+				}
+			});
+		}).catch(() => {});
+		const ids = new Set();
+		if (shownTabRef.current != null) ids.add(shownTabRef.current);
+		chrome.tabs.query({}).then((tabs) => {
+			for (const t of tabs) {
+				if (t.id != null && /^https?:/i.test(t.url || "") && !/chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(t.url || "")) ids.add(t.id);
+			}
+			for (const id of ids) void zwSendAvatar(id, msg);
+		}).catch(() => {
+			if (shownTabRef.current != null) void zwSendAvatar(shownTabRef.current, msg);
+		});
+	}, []);
 	(0, import_react.useEffect)(() => {
 		if (!urls || !ready) return;
 		const speech = new SpeechState((state) => {
@@ -25086,7 +25115,8 @@ function useCharacter(settings, onVoiceMessage) {
 			const response = await zwSendAvatar(tabId, {
 				action: "show",
 				payload: bundleRef.current.payload,
-				replace: true
+				replace: true,
+				state: avatarStateRef.current
 			});
 			if (shownTabRef.current === tabId) setPageIssue(describeShowFailure(response));
 		}
@@ -25161,11 +25191,16 @@ function useCharacter(settings, onVoiceMessage) {
 			}
 			const payload = bundleRef.current?.payload;
 			if (payload) chrome.storage.local.set({
-				[OVERLAY_CACHE_KEY]: { payload, at: Date.now() }
+				[OVERLAY_CACHE_KEY]: {
+					payload,
+					at: Date.now(),
+					state: avatarStateRef.current
+				}
 			});
 			const response = await zwSendAvatar(tabId, {
 				action: "show",
-				payload
+				payload,
+				state: avatarStateRef.current
 			});
 			if (disposed) return;
 			if (response && response.tabId != null) shownTabRef.current = response.tabId;
@@ -25173,10 +25208,16 @@ function useCharacter(settings, onVoiceMessage) {
 			setPageIssue(describeShowFailure(response));
 			sendAvatarState();
 			if (opts.keepOthers) return;
+			const liveId = shownTabRef.current;
 			try {
-				const liveId = shownTabRef.current;
-				if (!keepAliveRef.current && liveId != null) keepAliveRef.current = chrome.tabs.connect(liveId, { name: "avatar-keepalive" });
+				keepAliveRef.current?.disconnect();
 			} catch {}
+			keepAliveRef.current = null;
+			if (liveId != null) {
+				try {
+					keepAliveRef.current = chrome.tabs.connect(liveId, { name: "avatar-keepalive" });
+				} catch {}
+			}
 		};
 		const showActive = async () => {
 			windowId ??= (await chrome.windows.getCurrent()).id;
@@ -25194,6 +25235,9 @@ function useCharacter(settings, onVoiceMessage) {
 			if (hosts[0]?.id != null) {
 				shownTabRef.current = hosts[0].id;
 				try {
+					keepAliveRef.current?.disconnect();
+				} catch {}
+				try {
 					keepAliveRef.current = chrome.tabs.connect(hosts[0].id, { name: "avatar-keepalive" });
 				} catch {}
 			}
@@ -25207,8 +25251,10 @@ function useCharacter(settings, onVoiceMessage) {
 		const onUpdated = (tabId, change, tab) => {
 			if (change.status !== "complete" || tab.windowId !== windowId || !canHost(tab)) return;
 			if (tab.active) {
+				try {
+					keepAliveRef.current?.disconnect();
+				} catch {}
 				keepAliveRef.current = null;
-				shownTabRef.current = null;
 				showOn(tabId);
 				return;
 			}

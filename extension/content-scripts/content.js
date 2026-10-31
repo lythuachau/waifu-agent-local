@@ -4160,7 +4160,15 @@ async function mountAvatar(container, payload, callbacks, signal) {
 	async function show(payload, replace = false) {
 		if (replace) hide();
 		if (mounting && mountController?.signal.aborted) await mounting.catch(() => {});
-		if (overlay || mounting) return;
+		if (overlay) {
+			overlay.setState(desiredState);
+			return;
+		}
+		if (mounting) {
+			try { await mounting; } catch {}
+			overlay?.setState(desiredState);
+			if (overlay) return;
+		}
 		const mine = ++generation;
 		const controller = new AbortController();
 		mountController = controller;
@@ -4221,10 +4229,14 @@ async function mountAvatar(container, payload, callbacks, signal) {
 	}
 	/** @returns `retire`: take her off the page (the extension that owned her is gone) */
 	function initAvatarOverlay() {
+		let keepAliveGen = 0;
 		chrome.runtime.onConnect.addListener((port) => {
 			if (port.name !== "avatar-keepalive") return;
+			const mine = ++keepAliveGen;
 			port.onDisconnect.addListener(() => {
+				if (mine !== keepAliveGen) return;
 				chrome.storage.local.get("characterPrefs", (r) => {
+					if (mine !== keepAliveGen) return;
 					const always = !!(r.characterPrefs && r.characterPrefs.avatarAlwaysOn);
 					if (!always) hide();
 				});
@@ -4234,6 +4246,7 @@ async function mountAvatar(container, payload, callbacks, signal) {
 			if (message?.type !== "AVATAR") return;
 			switch (message.action) {
 				case "show":
+					if (message.state) desiredState = message.state;
 					show(message.payload, message.replace).then(() => sendResponse({ ok: true }), (error) => sendResponse({
 						ok: false,
 						error: error instanceof Error ? error.message : String(error)
