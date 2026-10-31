@@ -23835,6 +23835,9 @@ var Playback = class {
 	#ttsArmed = false;
 	#ttsComplete = false;
 	#synthLock = 0;
+	#audibleEnd = 0;
+	#mouthTimer = null;
+	#mouthOpen = false;
 	constructor(urls, voice, events) {
 		this.urls = urls;
 		this.voice = voice;
@@ -23852,6 +23855,7 @@ var Playback = class {
 		this.#ttsComplete = false;
 		this.#playEnd = 0;
 		this.#playStart = 0;
+		this.#audibleEnd = 0;
 	}
 	/** Seconds of audio still scheduled. Infinity until this utterance has been fully queued. */
 	remaining() {
@@ -23969,6 +23973,8 @@ var Playback = class {
 		}
 		this.#settleActive?.();
 		this.#settleActive = null;
+		this.#stopMouthTimer();
+		this.#mouthOpen = false;
 		this.#resetPlayhead();
 		this.events.onStopped();
 		this.events.onMessage(null);
@@ -23990,6 +23996,31 @@ var Playback = class {
 			});
 		}
 		return this.#context;
+	}
+	#notifyMouth(open) {
+		if (open) {
+			this.#mouthOpen = true;
+			this.events.onAudio(true);
+			this.#armMouthEnd();
+			return;
+		}
+		if (!this.#mouthOpen) return;
+		this.#mouthOpen = false;
+		this.#stopMouthTimer();
+		if (this.#ttsComplete) this.events.onAudioGone?.();
+		else this.events.onAudio(false);
+	}
+	#armMouthEnd() {
+		this.#stopMouthTimer();
+		if (!this.#mouthOpen || !this.#ttsComplete) return;
+		const ctx = this.#context;
+		if (!ctx || !(this.#audibleEnd > 0)) return;
+		const ms = Math.max(0, (this.#audibleEnd + 0.05 - ctx.currentTime) * 1e3);
+		this.#mouthTimer = setTimeout(() => this.#notifyMouth(false), ms);
+	}
+	#stopMouthTimer() {
+		if (this.#mouthTimer != null) clearTimeout(this.#mouthTimer);
+		this.#mouthTimer = null;
 	}
 	async #drain() {
 		this.#draining = true;
@@ -24126,7 +24157,7 @@ var Playback = class {
 						console.warn("[character/tts] decode failed", error);
 					}
 				}
-				if (gotAudio) this.events.onAudio(false);
+				if (gotAudio) this.#notifyMouth(false);
 				resolve();
 			};
 			const bump = () => {
@@ -24147,7 +24178,7 @@ var Playback = class {
 				if (!gotAudio) {
 					playHead = now + 0.04;
 					this.#playStart = playHead;
-					this.events.onAudio(true);
+					this.#notifyMouth(true);
 					gotAudio = true;
 					this.#ttsArmed = true;
 				}
@@ -24173,8 +24204,10 @@ var Playback = class {
 				}
 				playHead = startAt + Math.max(0, buffer.duration - offset);
 				this.#playEnd = playHead;
+				this.#audibleEnd = startAt + Math.max(0, audibleDuration(buffer) - offset);
 				this.#source = source;
 				lastSource = source;
+				if (this.#ttsComplete) this.#armMouthEnd();
 			};
 			const beginPlayback = () => {
 				if (started || settled) return;
@@ -24244,6 +24277,7 @@ var Playback = class {
 						beginPlayback();
 						if (ws.onmessage === onMsg) ws.onmessage = null;
 						this.#ttsComplete = true;
+						this.#armMouthEnd();
 						const waitPlayhead = () => {
 							if (nonce !== this.#nonce || settled) return finish(null);
 							if (context.state !== "running") context.resume().catch(() => {});
@@ -24403,7 +24437,7 @@ var Playback = class {
 				source.disconnect();
 				if (this.#source === source) this.#source = null;
 				if (this.#settleActive === finish) this.#settleActive = null;
-				if (started) this.events.onAudio(false);
+				if (started) this.#notifyMouth(false);
 				resolve();
 			};
 			this.#settleActive = finish;
@@ -24414,11 +24448,12 @@ var Playback = class {
 				return finish();
 			}
 			started = true;
-			this.events.onAudio(true);
 			this.#ttsArmed = true;
 			this.#ttsComplete = true;
 			this.#playStart = context.currentTime;
 			this.#playEnd = context.currentTime + buffer.duration;
+			this.#audibleEnd = context.currentTime + audibleDuration(buffer);
+			this.#notifyMouth(true);
 			watchdog = setTimeout(finish, Math.ceil(buffer.duration * 1e3) + WATCHDOG_SLACK_MS);
 		});
 	}
@@ -24448,6 +24483,21 @@ function concat(frames) {
 	return out.buffer;
 }
 /** Headerless 32-bit float samples, mono. A trailing partial sample is dropped */
+/** Seconds into the buffer that still contain speech (drop near-silent tail). */
+function audibleDuration(buffer, floor = 0.05) {
+	const n = buffer.length;
+	if (n < 32) return buffer.duration;
+	const ch = buffer.getChannelData(0);
+	const sr = buffer.sampleRate;
+	const win = Math.max(1, Math.floor(sr * 0.01));
+	for (let i = n - 1; i >= 0; i -= win) {
+		const from = Math.max(0, i - win + 1);
+		let e = 0;
+		for (let j = from; j <= i; j++) e += ch[j] * ch[j];
+		if (Math.sqrt(e / (i - from + 1)) >= floor) return (i + 1) / sr;
+	}
+	return 0;
+}
 function pcmF32ToBuffer(context, bytes, rate) {
 	const samples = new Float32Array(bytes, 0, Math.floor(bytes.byteLength / 4));
 	const buffer = context.createBuffer(1, samples.length, rate);
@@ -25032,36 +25082,48 @@ function useCharacter(settings, onVoiceMessage) {
 	}, []);
 	/** Her speaking/listening state, from the audio (see ./avatarState); re-sent on a heartbeat */
 	const avatarStateRef = (0, import_react.useRef)("listening");
+	const avatarStateSeqRef = (0, import_react.useRef)(0);
 	const sendAvatarState = (0, import_react.useCallback)(() => {
-		const state = avatarStateRef.current;
-		const msg = {
-			action: "state",
-			state
-		};
+		const seq = avatarStateSeqRef.current;
 		chrome.storage.local.get(OVERLAY_CACHE_KEY).then((r) => {
 			const prev = r[OVERLAY_CACHE_KEY];
-			if (prev && prev.payload) chrome.storage.local.set({
+			if (!prev || !prev.payload) return;
+			if ((prev.seq || 0) > seq) return;
+			chrome.storage.local.set({
 				[OVERLAY_CACHE_KEY]: {
 					...prev,
-					state
+					state: avatarStateRef.current,
+					seq
 				}
 			});
 		}).catch(() => {});
 		const ids = new Set();
 		if (shownTabRef.current != null) ids.add(shownTabRef.current);
 		chrome.tabs.query({}).then((tabs) => {
+			const state = avatarStateRef.current;
+			const seqNow = avatarStateSeqRef.current;
 			for (const t of tabs) {
 				if (t.id != null && /^https?:/i.test(t.url || "") && !/chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(t.url || "")) ids.add(t.id);
 			}
+			const msg = {
+				action: "state",
+				state,
+				seq: seqNow
+			};
 			for (const id of ids) void zwSendAvatar(id, msg);
 		}).catch(() => {
-			if (shownTabRef.current != null) void zwSendAvatar(shownTabRef.current, msg);
+			if (shownTabRef.current != null) void zwSendAvatar(shownTabRef.current, {
+				action: "state",
+				state: avatarStateRef.current,
+				seq: avatarStateSeqRef.current
+			});
 		});
 	}, []);
 	(0, import_react.useEffect)(() => {
 		if (!urls || !ready) return;
 		const speech = new SpeechState((state) => {
 			avatarStateRef.current = state;
+			avatarStateSeqRef.current += 1;
 			sendAvatarState();
 		});
 		const playback = new Playback(urls, () => ({
@@ -25073,6 +25135,7 @@ function useCharacter(settings, onVoiceMessage) {
 				speech.audioStarted();
 				voiceRef.current?.warmUp();
 			},
+			onAudioGone: () => speech.silence(),
 			onGesture: async (action) => {
 				speech.silence();
 				await sendToAvatar({

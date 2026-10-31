@@ -4153,6 +4153,13 @@ async function mountAvatar(container, payload, callbacks, signal) {
 	var generation = 0;
 	/** The latest state the side panel asked for, applied to her as soon as she is mounted */
 	var desiredState = "listening";
+	var desiredSeq = 0;
+	function applyAvatarState(state, seq) {
+		if (seq != null && Number(seq) < desiredSeq) return;
+		if (seq != null) desiredSeq = Number(seq);
+		if (state) desiredState = state;
+		overlay?.setState(desiredState);
+	}
 	function notifyPanel(event) {
 		if (!isExtensionContextValid()) return;
 		chrome.runtime.sendMessage(event).catch(() => {});
@@ -4246,7 +4253,7 @@ async function mountAvatar(container, payload, callbacks, signal) {
 			if (message?.type !== "AVATAR") return;
 			switch (message.action) {
 				case "show":
-					if (message.state) desiredState = message.state;
+					if (message.state) applyAvatarState(message.state, message.seq);
 					show(message.payload, message.replace).then(() => sendResponse({ ok: true }), (error) => sendResponse({
 						ok: false,
 						error: error instanceof Error ? error.message : String(error)
@@ -4257,8 +4264,7 @@ async function mountAvatar(container, payload, callbacks, signal) {
 					sendResponse({ ok: true });
 					return;
 				case "state":
-					desiredState = message.state;
-					overlay?.setState(message.state);
+					applyAvatarState(message.state, message.seq);
 					sendResponse({ ok: !!overlay });
 					return;
 				case "gesture":
