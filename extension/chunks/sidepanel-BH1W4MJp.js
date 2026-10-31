@@ -21234,6 +21234,60 @@ tools.set("execute_javascript", tool({
 		return result.message;
 	}
 }));
+function normalizeBatchSteps(steps) {
+	if (!Array.isArray(steps)) return [];
+	const out = [];
+	for (const item of steps.slice(0, 12)) {
+		if (!item || typeof item !== "object") continue;
+		if (typeof item.action === "string") {
+			const { action, ...rest } = item;
+			out.push({ name: action, input: rest });
+			continue;
+		}
+		const name = Object.keys(item)[0];
+		if (!name) continue;
+		let input = item[name];
+		if (name === "click_element_by_index" && typeof input === "number") input = { index: input };
+		if (name === "press_key" && typeof input === "string") input = { key: input };
+		if (name === "wait" && typeof input === "number") input = { seconds: input };
+		out.push({
+			name,
+			input: input && typeof input === "object" ? input : {}
+		});
+	}
+	return out;
+}
+tools.set("act_batch", tool({
+	description: "Run several page actions in one step (click, type, press_key, scroll, wait, select_dropdown_option). Prefer this when filling a form or typing then pressing Enter. Indexes are from the current viewport dump; if the page changes mid-batch it stops.",
+	inputSchema: object({ steps: array(object({}).passthrough()).min(1).max(12) }),
+	execute: async function(input, { signal }) {
+		const steps = normalizeBatchSteps(input.steps);
+		if (!steps.length) return "act_batch: no steps";
+		const done = [];
+		let url0 = await this.pageController.getCurrentUrl();
+		for (let i = 0; i < steps.length; i++) {
+			signal.throwIfAborted();
+			const step = steps[i];
+			const fn = this.tools.get(step.name);
+			if (!fn || step.name === "act_batch" || step.name === "done" || step.name === "ask_user") {
+				return `failed at step ${i + 1}: unknown action ${step.name}. Done: ${done.join("; ") || "(none)"}`;
+			}
+			try {
+				const msg = await fn.execute.call(this, step.input, { signal });
+				done.push(`${i + 1}. ${step.name}: ${msg}`);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				return `failed at step ${i + 1} ${step.name}: ${message}. Done: ${done.join("; ") || "(none)"}`;
+			}
+			await this.pageController.updateTree();
+			const url1 = await this.pageController.getCurrentUrl();
+			if (url1 !== url0 && i < steps.length - 1) {
+				return `indexes_invalid: page changed after step ${i + 1}. Use the new dump before more clicks. ${done.join("; ")}`;
+			}
+		}
+		return done.join("\n");
+	}
+}));
 //#endregion
 //#region ../core/src/jev/JevClient.ts
 /**
@@ -21667,7 +21721,7 @@ You have a fast executor tool, \`act\`, backed by Jev (a decision model). Prefer
 - Call \`act\` with \`goal\`: ONE small, concrete, observable outcome on the current page (1-5 UI actions), e.g. "Search for 'wireless mouse' with the site search box" or "Open the first product in the results list". Never pass the whole user request as one goal.
 - Put every piece of text that must be typed or selected into \`values\`, as exact strings (e.g. ["wireless mouse"]). Jev never invents text: without \`values\` it cannot type or select.
 - Jev picks the element, the action and the value itself, and may perform several actions in one call. The result lists every action performed and why it stopped.
-- If it stopped as \`unsure\`, \`no_action\`, \`stuck\` or \`action_failed\`, re-plan: state the goal more specifically, scroll, or use the direct index tools (\`click_element_by_index\`, \`input_text\`, \`select_dropdown_option\`, \`press_key\`) yourself.
+- If it stopped as \`unsure\`, \`no_action\`, \`stuck\` or \`action_failed\`, re-plan: state the goal more specifically, scroll, or use the direct index tools (\`click_element_by_index\`, \`input_text\`, \`select_dropdown_option\`, \`press_key\`) or \`act_batch\` yourself. Prefer \`act_batch\` for type-then-Enter.
 - If it stopped as \`needs_confirmation\`, the next click or Enter looks irreversible (paying, sending, deleting, publishing). If the user request asks for exactly that effect (e.g. "comment on this post" means posting the comment), call \`act\` again with the same goal and \`allow_irreversible: true\`. Otherwise ask the user first.
 - To submit typed text that has no visible send button (comment boxes, chat inputs, search boxes), make the goal "submit/post the typed text"; Jev can press Enter. Include the text in \`values\` too, so Jev can retype it if needed.
 - Always verify the result on the new <browser_state> before moving on. Reading and extracting information, and deciding when the whole task is done, remain your job.
@@ -23548,8 +23602,14 @@ function pageText(state) {
 }
 function chapterFromContent(content) {
 	const raw = String(content || "");
-	const mark = "[Canvas fillText]";
-	let body = raw.includes(mark) ? raw.slice(raw.indexOf(mark) + mark.length) : raw;
+	const canvasMark = "[Canvas fillText]";
+	const pageMark = "[Page text]";
+	let body = raw;
+	if (raw.includes(canvasMark)) body = raw.slice(raw.indexOf(canvasMark) + canvasMark.length);
+	const canvasLen = body.replace(/\s+/g, " ").trim().length;
+	if ((!raw.includes(canvasMark) || canvasLen < 160) && raw.includes(pageMark)) {
+		body = raw.slice(raw.indexOf(pageMark) + pageMark.length);
+	}
 	body = body.replace(/\[Start of page\]|\[End of page\]/g, " ");
 	body = body.replace(/Interactive elements[\s\S]*$/i, " ");
 	body = body.replace(/<[^>]+>/g, " ").replace(/\[\d+\]/g, " ");
@@ -23876,6 +23936,7 @@ var Playback = class {
 	#rtf = 0.25;
 	#context = null;
 	#source = null;
+	#sources = new Set();
 	#settleActive = null;
 	#nonce = 0;
 	#queue = [];
@@ -24009,6 +24070,29 @@ var Playback = class {
 		if (!this.#draining) this.#drain();
 		return done;
 	}
+	#killSources() {
+		for (const source of this.#sources) {
+			source.onended = null;
+			try {
+				source.stop();
+			} catch {}
+			try {
+				source.disconnect();
+			} catch {}
+		}
+		this.#sources.clear();
+		this.#source = null;
+	}
+	#armSource(source) {
+		this.#sources.add(source);
+		this.#source = source;
+		const prev = source.onended;
+		source.onended = (ev) => {
+			this.#sources.delete(source);
+			if (this.#source === source) this.#source = null;
+			if (typeof prev === "function") prev.call(source, ev);
+		};
+	}
 	/** Barge-in / mute: stop now and drop everything queued */
 	stop() {
 		while (this.#queue.length) {
@@ -24016,15 +24100,9 @@ var Playback = class {
 			item?.settle?.();
 		}
 		this.#nonce += 1;
-		const source = this.#source;
-		this.#source = null;
-		if (source) {
-			source.onended = null;
-			try {
-				source.stop();
-			} catch {}
-			source.disconnect();
-		}
+		this.#draining = false;
+		this.#killSources();
+		this.#closeSocket();
 		this.#settleActive?.();
 		this.#settleActive = null;
 		this.#stopMouthTimer();
@@ -24259,7 +24337,7 @@ var Playback = class {
 				playHead = startAt + Math.max(0, buffer.duration - offset);
 				this.#playEnd = playHead;
 				this.#audibleEnd = startAt + Math.max(0, audibleDuration(buffer) - offset);
-				this.#source = source;
+				this.#armSource(source);
 				lastSource = source;
 				if (this.#ttsComplete) this.#armMouthEnd();
 			};
@@ -24336,20 +24414,8 @@ var Playback = class {
 							if (nonce !== this.#nonce || settled) return finish(null);
 							if (context.state !== "running") context.resume().catch(() => {});
 							const remain = playHead - context.currentTime;
-							if (remain > 0.12) {
+							if (remain > 0.05 || this.#sources.size > 0) {
 								setTimeout(waitPlayhead, Math.min(Math.max(remain * 1e3, 80), 400));
-								return;
-							}
-							const src = lastSource;
-							if (src) {
-								let ended = false;
-								const end = () => {
-									if (ended) return;
-									ended = true;
-									finish(null);
-								};
-								src.onended = end;
-								setTimeout(end, 8000);
 								return;
 							}
 							finish(null);
@@ -24476,7 +24542,6 @@ var Playback = class {
 			const source = context.createBufferSource();
 			source.buffer = buffer;
 			source.connect(context.destination);
-			this.#source = source;
 			let settled = false;
 			let started = false;
 			let watchdog = null;
@@ -24489,6 +24554,7 @@ var Playback = class {
 					source.stop();
 				} catch {}
 				source.disconnect();
+				this.#sources.delete(source);
 				if (this.#source === source) this.#source = null;
 				if (this.#settleActive === finish) this.#settleActive = null;
 				if (started) this.#notifyMouth(false);
@@ -24496,6 +24562,7 @@ var Playback = class {
 			};
 			this.#settleActive = finish;
 			source.onended = finish;
+			this.#armSource(source);
 			try {
 				source.start();
 			} catch {
@@ -51996,7 +52063,7 @@ function AgentBubble({ text, highlight, speaking, children }) {
 				children,
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Markdown, { text }),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "absolute -bottom-2 right-2 flex items-center gap-1",
+					className: "absolute -bottom-2 right-2 z-20 flex items-center gap-1 pointer-events-auto",
 					children: [speaking && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StopSpeakingButton, { onStop: speaking.stop }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CopyButton, {
 						text,
 						className: "opacity-0 group-hover:opacity-100"
@@ -52007,12 +52074,19 @@ function AgentBubble({ text, highlight, speaking, children }) {
 	});
 }
 /** The character's reply: one bubble per message, the way people text */
+function messageIsSpeaking(current, message) {
+	if (!current || !message) return false;
+	if (current === message) return true;
+	const a = String(current.tts_text || current.text || "").trim();
+	const b = String(message.tts_text || message.text || "").trim();
+	return a.length > 0 && a === b;
+}
 function CharacterBubbles({ reply, failed, highlight }) {
 	const speaking = (0, import_react.use)(SpeakingContext);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: reply.messages.map((message, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AgentBubble, {
 		text: message.text,
 		highlight: highlight && i === reply.messages.length - 1,
-		speaking: speaking.message === message ? speaking : void 0,
+		speaking: speaking.message && (messageIsSpeaking(speaking.message, message) || i === reply.messages.length - 1) ? speaking : void 0,
 		children: failed && i === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "mb-1 flex items-center gap-1 text-[11px] font-medium text-brand-light",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, { className: "size-3" }), "Couldn't fully complete the task"]
@@ -52310,7 +52384,8 @@ var ACTION_LABELS = {
 	switch_to_tab: "Switch tab",
 	close_tab: "Close tab",
 	done: "Done",
-	execute_javascript: "Script"
+	execute_javascript: "Script",
+	act_batch: "Batch"
 };
 function actionLabel(name) {
 	return ACTION_LABELS[name] ?? name.replace(/_/g, " ");
@@ -52331,6 +52406,7 @@ function actionSummary(name, input) {
 		case "close_tab": return `#${input.tab_id}`;
 		case "ask_user": return input.question ?? "";
 		case "done": return input.success === false ? "incomplete" : "";
+		case "act_batch": return `${input.steps?.length || 0} steps`;
 		default: return JSON.stringify(input);
 	}
 }
@@ -52338,8 +52414,12 @@ function actionSummary(name, input) {
 function StopSpeakingButton({ onStop }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 		type: "button",
-		onClick: onStop,
-		className: "flex items-center rounded border bg-card px-1 py-0.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer",
+		onClick: (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			onStop?.();
+		},
+		className: "relative z-20 flex items-center rounded border bg-card px-1.5 py-1 text-muted-foreground transition-colors hover:text-foreground cursor-pointer pointer-events-auto",
 		"aria-label": "Stop speaking",
 		title: "Stop speaking",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Square, { className: "size-2.5 fill-current" })
@@ -64072,9 +64152,9 @@ function useAgent({ characterRef, moveAvatarRef }) {
 						kind: "chat"
 					};
 					try {
-						const { reply, pageUrl } = await character.chat(current.turns.map(toExchange), message, {
+						const { reply, pageUrl } = await character.chat(current.turns.map(toExchange), options.extraContext ? `${options.extraContext}\n\n${message}` : message, {
 							chatId: current.id,
-							aboutPage: route.aboutPage,
+							aboutPage: options.aboutPage ?? route.aboutPage,
 							previousUrl: lastPageUrl(current)
 						});
 						turn.reply = reply;
@@ -64092,7 +64172,7 @@ function useAgent({ characterRef, moveAvatarRef }) {
 				liveQuestionsRef.current = {};
 				setLiveQuestions({});
 				try {
-					await agent.execute(message, { conversation: current.turns.map(toConversationTurn) });
+					await agent.execute(options.extraContext ? `${options.extraContext}\n\n${message}` : message, { conversation: current.turns.map(toConversationTurn) });
 				} catch (error) {
 					agent.history.push({
 						type: "error",
@@ -64210,6 +64290,28 @@ function useAgent({ characterRef, moveAvatarRef }) {
 //#region src/entrypoints/sidepanel/App.tsx
 /** Sent by the Retry button of a failed task, exactly as if the user typed it */
 var RETRY_MESSAGE = "Please try again.";
+function zwRestrictedTab(url) {
+	return !url || /^(chrome|edge|devtools|chrome-extension|about|brave|opera|vivaldi):/i.test(url) || /chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(url);
+}
+async function dumpTabContext(tabId) {
+	try {
+		const state = await pageControl(tabId, "get_browser_state");
+		pageControl(tabId, "clean_up_highlights").catch(() => {});
+		return pageText(state) || (state?.content || "").slice(0, 8e3);
+	} catch (error) {
+		return `(không đọc được: ${error instanceof Error ? error.message : String(error)})`;
+	}
+}
+async function buildMentionContext(mentions) {
+	if (!mentions?.length) return "";
+	const parts = [];
+	for (const tab of mentions.slice(0, 5)) {
+		if (tab.id == null || zwRestrictedTab(tab.url)) continue;
+		const body = await dumpTabContext(tab.id);
+		parts.push(`[Tab] ${tab.title || ""} | ${tab.url || ""}\n${body}`);
+	}
+	return parts.join("\n\n");
+}
 function App() {
 	const [view, setView] = (0, import_react.useState)({ name: "chat" });
 	const [inputValue, setInputValue] = (0, import_react.useState)("");
@@ -64259,16 +64361,33 @@ function App() {
 	const { unlockAudio } = character;
 	const [readingChapters, setReadingChapters] = (0, import_react.useState)(false);
 	const readingStopRef = (0, import_react.useRef)(false);
+	const [tabMentions, setTabMentions] = (0, import_react.useState)([]);
+	const [tabPicker, setTabPicker] = (0, import_react.useState)(null);
+	const sendRef = (0, import_react.useRef)(() => {});
 	const sendMessage = (0, import_react.useCallback)((message, options) => {
 		const text = message.trim();
 		if (!text) return;
 		setInputValue("");
+		setTabPicker(null);
 		setView({ name: "chat" });
 		unlockAudio();
-		send(text, options).catch((error) => {
+		const mentions = tabMentions;
+		setTabMentions([]);
+		(async () => {
+			let extraContext = options?.extraContext || "";
+			if (mentions.length) {
+				const dumped = await buildMentionContext(mentions);
+				extraContext = extraContext ? `${extraContext}\n\n${dumped}` : dumped;
+			}
+			await send(text, {
+				...options,
+				extraContext: extraContext || options?.extraContext
+			});
+		})().catch((error) => {
 			console.error("[SidePanel] Failed to send message:", error);
 		});
-	}, [send, unlockAudio]);
+	}, [send, unlockAudio, tabMentions]);
+	sendRef.current = sendMessage;
 	voiceMessageRef.current = (text) => {
 		if (canSend) sendMessage(text);
 	};
@@ -64324,11 +64443,68 @@ function App() {
 		}
 	}, [readingChapters, character, unlockAudio, logChapterError]);
 	const handleKeyDown = (e) => {
+		if (e.key === "Escape") {
+			setTabPicker(null);
+			return;
+		}
 		if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
 			e.preventDefault();
 			handleSubmit();
 		}
 	};
+	const handleComposerChange = (value) => {
+		setInputValue(value);
+		const at = value.match(/(^|\s)@([^\s@]*)$/);
+		if (at) {
+			chrome.tabs.query({ currentWindow: true }).then((tabs) => {
+				const q = at[2].toLowerCase();
+				const list = tabs.filter((t) => t.id != null && /^https?:/i.test(t.url || "") && !zwRestrictedTab(t.url)).filter((t) => !q || `${t.title} ${t.url}`.toLowerCase().includes(q)).slice(0, 12);
+				setTabPicker(list);
+			}).catch(() => setTabPicker([]));
+		} else setTabPicker(null);
+	};
+	const pickTab = (tab) => {
+		setTabMentions((cur) => cur.some((t) => t.id === tab.id) ? cur : [...cur, {
+			id: tab.id,
+			title: tab.title || tab.url || `#${tab.id}`,
+			url: tab.url || ""
+		}]);
+		setInputValue((cur) => cur.replace(/(^|\s)@[^\s@]*$/, "$1").trimStart());
+		setTabPicker(null);
+	};
+	const handleSummarize = () => {
+		if (!canSend) return;
+		sendMessage("Tóm tắt trang đang mở.", { aboutPage: true });
+	};
+	(0, import_react.useEffect)(() => {
+		const run = async (payload) => {
+			if (!payload?.command) return;
+			if (payload.t && Date.now() - payload.t > 2e4) return;
+			if (payload.command === "inline-summarize") sendRef.current(`Tóm tắt đoạn đã chọn:\n${payload.text || ""}`);
+			else if (payload.command === "inline-translate") sendRef.current(`Dịch sang tiếng Việt:\n${payload.text || ""}`);
+			else if (payload.command === "inline-ask") {
+				setView({ name: "chat" });
+				setInputValue(payload.text ? `Về đoạn này:\n${payload.text}\n\n` : "");
+			} else if (payload.command === "inline-speak") {
+				if (readingChapters) return;
+				character.speakError(payload.text || "");
+			}
+		};
+		const consume = async () => {
+			const rec = await chrome.storage.local.get("zwPendingCommand");
+			const pending = rec.zwPendingCommand;
+			if (!pending) return;
+			await chrome.storage.local.remove("zwPendingCommand");
+			await run(pending);
+		};
+		consume().catch(() => {});
+		const onMsg = (message) => {
+			if (message?.type !== "ZW_COMMAND") return;
+			run(message);
+		};
+		chrome.runtime.onMessage.addListener(onMsg);
+		return () => chrome.runtime.onMessage.removeListener(onMsg);
+	}, [unlockAudio, voice, character, readingChapters]);
 	if (view.name === "config") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ConfigPanel, {
 		config,
 		keyError,
@@ -64460,7 +64636,22 @@ function App() {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("footer", {
 				className: "border-t p-3",
-				children: [voice.needsMicPermission && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				children: [speakingMessage && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mb-2 flex items-center justify-between gap-2 rounded-md border border-brand/40 bg-brand/10 px-2.5 py-1.5",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-[11px] text-brand-light",
+						children: "Đang nói…"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: (e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							stopSpeaking();
+						},
+						className: "shrink-0 rounded-md border border-brand/50 bg-card px-2 py-1 text-[11px] font-medium text-foreground cursor-pointer hover:bg-brand/20",
+						children: "Dừng nói"
+					})]
+				}), voice.needsMicPermission && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mb-2 flex items-center gap-2 rounded-md border border-brand/30 bg-brand/5 px-2.5 py-1.5 text-[11px] text-muted-foreground",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						className: "flex-1",
@@ -64477,20 +64668,52 @@ function App() {
 					running: isRunning,
 					onClose: voice.stop,
 					onStop: handleStop
-				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(InputGroup, {
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "relative",
+					children: [
+						tabMentions.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mb-1.5 flex flex-wrap gap-1",
+							children: tabMentions.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+								type: "button",
+								onClick: () => setTabMentions((cur) => cur.filter((t) => t.id !== tab.id)),
+								className: "max-w-full truncate rounded-full border border-brand/40 bg-brand/10 px-2 py-0.5 text-[10px] text-brand-light",
+								title: tab.url,
+								children: ["@", tab.title, " ×"]
+							}, tab.id))
+						}),
+						!!(tabPicker && tabPicker.length) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "absolute bottom-full mb-1 max-h-40 w-full overflow-y-auto rounded-md border bg-popover p-1 text-[11px] shadow-md z-30",
+							children: tabPicker.map((tab) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								onClick: () => pickTab(tab),
+								className: "block w-full truncate rounded px-2 py-1 text-left hover:bg-brand/15",
+								children: tab.title || tab.url
+							}, "t" + tab.id))
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(InputGroup, {
 					className: "relative rounded-lg",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupTextarea, {
 						ref: textareaRef,
-						placeholder: pendingQuestion ? "Reply…" : chat.turns.length ? "Ask a follow-up…" : "Describe a task…",
+						placeholder: pendingQuestion ? "Reply…" : chat.turns.length ? "Hỏi tiếp… gõ @ để gắn tab" : "Mô tả việc… gõ @ để gắn tab",
 						value: inputValue,
-						onChange: (e) => setInputValue(e.target.value),
+						onChange: (e) => handleComposerChange(e.target.value),
 						onKeyDown: handleKeyDown,
 						disabled: !canSend,
-						className: cn("text-xs min-h-10", voice.available ? "pr-36" : pendingQuestion ? "pr-28" : "pr-20")
+						className: cn("text-xs min-h-10", voice.available ? "pr-44" : pendingQuestion ? "pr-36" : "pr-28")
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(InputGroupAddon, {
 						align: "inline-end",
 						className: "absolute bottom-0 right-0",
 						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupButton, {
+								size: "icon-sm",
+								variant: "ghost",
+								onClick: handleSummarize,
+								disabled: !canSend,
+								className: "size-7 cursor-pointer text-muted-foreground hover:text-brand-light",
+								"aria-label": "Tóm tắt trang",
+								title: "Tóm tắt trang (Alt+S)",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, { className: "size-3.5" })
+							}),
 							voice.available && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupButton, {
 								size: "icon-sm",
 								variant: "ghost",
@@ -64535,7 +64758,8 @@ function App() {
 						]
 					})]
 				})]
-			})
+			})]
+		})
 		]
 	});
 }

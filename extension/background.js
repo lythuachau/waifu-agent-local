@@ -233,21 +233,47 @@ var background = (function() {
 				});
 				return true;
 			} else if (message.type === "ZW_OPEN_CHAT") {
-				const tabId = sender.tab?.id;
-				const windowId = sender.tab?.windowId;
-				const done = () => sendResponse({ ok: true });
-				const openTab = () => chrome.tabs.create({ url: chrome.runtime.getURL("sidepanel.html") }).then(done).catch(() => sendResponse({ ok: false }));
-				const tryWindow = () => windowId != null ? chrome.sidePanel.open({ windowId }).then(done).catch(openTab) : openTab();
-				if (tabId != null) chrome.sidePanel.open({ tabId }).then(done).catch(tryWindow);
-				else tryWindow();
+				zwOpenSidePanel(sender.tab).then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
 				return true;
 			} else if (message.type === "AVATAR_EVENT") {
 				return;
+			} else if (message.type === "ZW_INLINE") {
+				const payload = {
+					command: message.command,
+					text: message.text || "",
+					url: message.url || sender.tab?.url || "",
+					title: message.title || sender.tab?.title || "",
+					tabId: sender.tab?.id,
+					t: Date.now()
+				};
+				chrome.storage.local.set({ zwPendingCommand: payload }).catch(() => {});
+				const tabId = sender.tab?.id;
+				const windowId = sender.tab?.windowId;
+				const opening = tabId != null ? chrome.sidePanel.open({ tabId }) : windowId != null ? chrome.sidePanel.open({ windowId }) : Promise.resolve();
+				opening.finally(() => {
+					setTimeout(() => chrome.runtime.sendMessage({ type: "ZW_COMMAND", ...payload }).catch(() => {}), 250);
+					sendResponse({ ok: true });
+				});
+				return true;
 			} else {
 				sendResponse({ error: "Unknown message type" });
 				return;
 			}
 		});
+		const zwOpenSidePanel = (tab) => {
+			const tabId = tab?.id;
+			const windowId = tab?.windowId;
+			if (tabId != null) {
+				return chrome.sidePanel.open({ tabId }).catch(() => {
+					if (windowId != null) return chrome.sidePanel.open({ windowId });
+				});
+			}
+			if (windowId != null) return chrome.sidePanel.open({ windowId });
+			return chrome.tabs.query({ active: true, lastFocusedWindow: true }).then(([active]) => {
+				if (active?.id != null) return chrome.sidePanel.open({ tabId: active.id });
+				if (active?.windowId != null) return chrome.sidePanel.open({ windowId: active.windowId });
+			});
+		};
 		chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
 		const zwRestricted = (url) => !url || /^(chrome|edge|devtools|chrome-extension|about|brave|opera|vivaldi):/i.test(url) || /chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(url);
 		const zwInjectAll = () => {

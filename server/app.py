@@ -643,6 +643,8 @@ AGENT_ACTION_ALIAS = {
     "close_tab": "close_tab",
     "move_avatar": "move_avatar",
     "execute_javascript": "execute_javascript",
+    "act_batch": "act_batch",
+    "batch": "act_batch",
 }
 
 def _agent_scroll_hits(body: dict) -> int:
@@ -679,8 +681,11 @@ AGENT_OUTPUT_NUDGE = (
     '"action":{"click_element_by_index":{"index":0}}}\n'
     "action is exactly one key: click_element_by_index {index}, "
     "input_text {index,text}, press_key {key}, scroll {down:true}, "
+    "act_batch {steps:[{click_element_by_index:{index}},{input_text:{index,text}},{press_key:{key}}]}, "
     "go_to_url {url}, open_new_tab {url}, switch_to_tab {tab_id}, close_tab {tab_id}, "
     "wait {seconds}, done {text,success}, act {goal,values}. "
+    "Prefer act_batch when filling a form or typing then Enter in one go. "
+    "Indexes are viewport-only; scroll if the target is offscreen. "
     "Use a numeric [index] from Interactive Elements. "
     "If the user only asked to swipe/scroll/lướt a video feed, do at most TWO "
     "scroll {down:true} then immediately done {success:true,text:'Đã lướt.'}. "
@@ -803,6 +808,27 @@ def _sanitize_act(raw, obj: dict, content: str) -> dict:
     return out
 
 
+def _sanitize_batch(raw, obj: dict | None = None) -> dict:
+    src = raw if isinstance(raw, dict) else {}
+    steps_in = src.get("steps") if isinstance(src.get("steps"), list) else raw if isinstance(raw, list) else []
+    if not steps_in and isinstance(obj, dict) and isinstance(obj.get("steps"), list):
+        steps_in = obj["steps"]
+    out = []
+    for item in steps_in[:12]:
+        if not isinstance(item, dict) or not item:
+            continue
+        if "action" in item and isinstance(item.get("action"), str):
+            name = AGENT_ACTION_ALIAS.get(item["action"], item["action"])
+            payload = {k: v for k, v in item.items() if k != "action"}
+            out.append({name: payload})
+            continue
+        key = next(iter(item))
+        name = AGENT_ACTION_ALIAS.get(key, key)
+        val = item[key]
+        out.append({name: val if isinstance(val, dict) else {}})
+    return {"steps": out}
+
+
 def _tool_input(name: str, raw, obj: dict, content: str, last_user: str) -> dict:
     if isinstance(raw, dict) and raw:
         if name == "click_element_by_index" and _as_int(raw.get("index")) is None:
@@ -817,6 +843,8 @@ def _tool_input(name: str, raw, obj: dict, content: str, last_user: str) -> dict
             return {**raw, "success": _as_bool(raw.get("success"), True)}
         if name == "act":
             return _sanitize_act(raw, obj, content)
+        if name == "act_batch":
+            return _sanitize_batch(raw, obj)
         return raw
     if name == "click_element_by_index":
         n = _index_from(obj, content, last_user)
@@ -854,6 +882,8 @@ def _tool_input(name: str, raw, obj: dict, content: str, last_user: str) -> dict
         return {"text": str(text)[:2000], "success": bool(success)}
     if name == "act":
         return _sanitize_act(raw, obj, content)
+    if name == "act_batch":
+        return _sanitize_batch(raw, obj)
     if name == "ask_user":
         return {"question": str(obj.get("question") or content)[:500]}
     if name in ("go_to_url", "open_new_tab"):
@@ -1718,6 +1748,17 @@ def local_persona_get(avatar_id: str):
 def local_persona_put(avatar_id: str, body: dict | None = None):
     user_store.save_persona(avatar_id, body or {})
     return persona_for(avatar_id)
+
+
+@app.get("/api/v1/local/shortcuts")
+def local_shortcuts_get():
+    return {"shortcuts": user_store.load_shortcuts()}
+
+
+@app.put("/api/v1/local/shortcuts")
+@app.post("/api/v1/local/shortcuts")
+def local_shortcuts_put(body: dict | None = None):
+    return {"shortcuts": user_store.save_shortcuts(body or {})}
 
 
 @app.get("/api/v1/local/prefs")

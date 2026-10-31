@@ -2921,6 +2921,17 @@ gl_Position = vec4(aPosition, 0.0, 1.0);
 		async getLastUpdateTime() {
 			return this.lastTimeUpdate;
 		}
+		async getPageInfoSnapshot() {
+			const pi = getPageInfo();
+			return {
+				success: true,
+				url: window.location.href,
+				title: document.title,
+				viewport_width: pi.viewport_width,
+				viewport_height: pi.viewport_height,
+				scrollY: window.scrollY
+			};
+		}
 		/**
 		* Get structured browser state for LLM consumption.
 		* Automatically calls updateTree() to refresh the DOM state.
@@ -2936,6 +2947,11 @@ gl_Position = vec4(aPosition, 0.0, 1.0);
 				const dump = document.getElementById("zw-canvas-text-dump");
 				const drawn = (dump?.textContent || "").trim();
 				if (drawn.length > 20) content = `${content}\n\n[Canvas fillText]\n${drawn}`;
+				const pageDump = document.getElementById("zw-page-text-dump");
+				const pageText = (pageDump?.textContent || "").trim();
+				if (pageText.length > 80 && pageText.length > drawn.length) {
+					content = `${content}\n\n[Page text]\n${pageText}`;
+				}
 			} catch (error) {
 				console.warn("[page] canvas text dump", error);
 			}
@@ -4294,6 +4310,116 @@ async function mountAvatar(container, payload, callbacks, signal) {
 	* What the agent is told about the avatar each step, so it can move her when she covers
 	* something it needs. Empty when she is not on this page.
 	*/
+	const ZW_INLINE_ID = "zw-inline-toolbar";
+	function ensureZwAssistStyle() {
+		if (document.getElementById("zw-assist-style")) return;
+		const style = document.createElement("style");
+		style.id = "zw-assist-style";
+		style.textContent = `#${ZW_INLINE_ID}{position:fixed;z-index:2147483646;display:none;gap:4px;padding:4px;border-radius:10px;background:#1a1a1e;box-shadow:0 8px 24px rgba(0,0,0,.4);pointer-events:auto}#${ZW_INLINE_ID} button{border:0;border-radius:8px;padding:5px 8px;background:transparent;color:#f4e6d4;font:600 11px/1 system-ui,sans-serif;cursor:pointer}#${ZW_INLINE_ID} button:hover{background:#c97d43}`;
+		(document.head || document.documentElement).appendChild(style);
+	}
+	function initInlineToolbar() {
+		ensureZwAssistStyle();
+		let bar = null;
+		let lastText = "";
+		let hideTimer = 0;
+		const hide = () => {
+			if (bar) bar.style.display = "none";
+		};
+		const send = (command) => {
+			const text = lastText;
+			if (!text || !isExtensionContextValid()) return;
+			chrome.runtime.sendMessage({
+				type: "ZW_INLINE",
+				command,
+				text,
+				url: location.href,
+				title: document.title
+			}).catch(() => {});
+			hide();
+		};
+		const ensureBar = () => {
+			if (bar) return bar;
+			bar = document.createElement("div");
+			bar.id = ZW_INLINE_ID;
+			bar.setAttribute("data-waifu-agent-not-interactive", "");
+			const mk = (label, command) => {
+				const b = document.createElement("button");
+				b.type = "button";
+				b.textContent = label;
+				b.addEventListener("mousedown", (e) => e.preventDefault());
+				b.addEventListener("click", (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					send(command);
+				});
+				return b;
+			};
+			bar.append(mk("Tóm tắt", "inline-summarize"), mk("Dịch Việt", "inline-translate"), mk("Đọc", "inline-speak"), mk("Hỏi", "inline-ask"));
+			(document.body || document.documentElement).appendChild(bar);
+			return bar;
+		};
+		const selectionRect = (sel) => {
+			try {
+				if (!sel.rangeCount) return null;
+				const range = sel.getRangeAt(0);
+				const rect = range.getBoundingClientRect();
+				if (rect && (rect.width > 0 || rect.height > 0)) return rect;
+				const rects = range.getClientRects();
+				return rects.length ? rects[rects.length - 1] : null;
+			} catch {
+				return null;
+			}
+		};
+		const fromSelection = () => {
+			const sel = window.getSelection();
+			if (!sel || sel.isCollapsed) {
+				hide();
+				return;
+			}
+			const text = sel.toString().replace(/\s+/g, " ").trim();
+			if (text.length < 2) {
+				hide();
+				return;
+			}
+			const node = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+			if (node?.closest?.("[data-waifu-agent-avatar], #" + ZW_INLINE_ID)) return;
+			const rect = selectionRect(sel);
+			if (!rect) return;
+			lastText = text;
+			const el = ensureBar();
+			const left = Math.max(8, Math.min(rect.left, window.innerWidth - 280));
+			const top = rect.bottom + 8 > window.innerHeight - 44 ? Math.max(8, rect.top - 40) : rect.bottom + 8;
+			el.style.left = `${left}px`;
+			el.style.top = `${top}px`;
+			el.style.display = "flex";
+		};
+		const scheduleShow = () => {
+			clearTimeout(hideTimer);
+			hideTimer = window.setTimeout(fromSelection, 30);
+		};
+		document.addEventListener("mouseup", scheduleShow, true);
+		document.addEventListener("pointerup", scheduleShow, true);
+		document.addEventListener("keyup", (e) => {
+			if (e.shiftKey || ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) scheduleShow();
+		}, true);
+		document.addEventListener("selectionchange", () => {
+			clearTimeout(hideTimer);
+			hideTimer = window.setTimeout(() => {
+				const sel = window.getSelection();
+				if (!sel || sel.isCollapsed || !sel.toString().trim()) hide();
+				else fromSelection();
+			}, 40);
+		});
+		document.addEventListener("keydown", (e) => {
+			if (e.key === "Escape") hide();
+		}, true);
+		document.addEventListener("mousedown", (e) => {
+			if (bar && (e.target === bar || bar.contains(e.target))) return;
+			if (window.getSelection && !window.getSelection().isCollapsed) return;
+			hide();
+		}, true);
+	}
 	function avatarNote() {
 		if (!overlay) return "";
 		const r = overlay.rect();
@@ -4342,7 +4468,7 @@ async function mountAvatar(container, payload, callbacks, signal) {
 		function getPC() {
 			if (!pageController) pageController = new PageController({
 				enableMask: false,
-				viewportExpansion: 400,
+				viewportExpansion: 0,
 				openLinksInSameTab: true
 			});
 			return pageController;
@@ -4403,6 +4529,7 @@ async function mountAvatar(container, payload, callbacks, signal) {
 				case "scroll":
 				case "scroll_horizontally":
 				case "execute_javascript":
+				case "get_page_info":
 					pc[methodName](...payload || []).then((result) => {
 						const note = action === "get_browser_state" ? avatarNote() : "";
 						sendResponse(note ? {
@@ -4436,6 +4563,7 @@ async function mountAvatar(container, payload, callbacks, signal) {
 			case "scroll": return "scroll";
 			case "scroll_horizontally": return "scrollHorizontally";
 			case "execute_javascript": return "executeJavascript";
+			case "get_page_info": return "getPageInfoSnapshot";
 			default: return action;
 		}
 	}
@@ -4448,6 +4576,7 @@ async function mountAvatar(container, payload, callbacks, signal) {
 			console.debug(`[Content] Loaded on ${window.location.href}`);
 			const retirePageController = initPageController();
 			const retireAvatar = initAvatarOverlay();
+			initInlineToolbar();
 			onExtensionContextInvalidated(() => {
 				retirePageController();
 				retireAvatar();
