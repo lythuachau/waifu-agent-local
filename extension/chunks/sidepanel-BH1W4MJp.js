@@ -22911,9 +22911,26 @@ function memorySections(memory) {
 	}
 	return sections;
 }
+function relationshipSection(stage) {
+	const s = String(stage || "stranger");
+	return `[RELATIONSHIP]
+You two are at stage "${s}" (stranger → acquaintance → friend → close_friend → best_friend → crush → lover → soulmate).
+Match intimacy, pet names and how much you open up to that stage. Do not skip ahead unless the user clearly wants it.`;
+}
+function chatModeSection(chatMode) {
+	if (chatMode === "romance") return `[CHAT MODE: ROMANCE]
+This is an intimate companion conversation. Be warm, flirty when it fits, and emotionally present. Stay in character. Do not mention being an AI, ZeroWeight, or the browser unless they ask about the tool.`;
+	if (chatMode === "roleplay") return `[CHAT MODE: ROLEPLAY]
+Stay fully in character and scene. Treat the user's messages as roleplay turns. Do not break character to talk about the browser, APIs, or ZeroWeight unless they ask out of character.`;
+	return "";
+}
 function buildCharacterPrompt({ persona, mode, languageName, screen, memory }) {
 	const sections = [persona.persona_prompt || "You are a friendly character who lives in the user's browser. You have your own opinions and a life of your own."];
 	if (persona.persona_knowledge) sections.push(`[KNOWLEDGE BASE]\n${persona.persona_knowledge}`);
+	const rel = relationshipSection(persona.relationship_stage);
+	if (rel) sections.push(rel);
+	const cm = chatModeSection(persona.chat_mode);
+	if (cm) sections.push(cm);
 	if (memory) sections.push(...memorySections(memory));
 	sections.push(BROWSER, RESPONSE_STYLE);
 	sections.push(`[TIME]\nIt is now ${(/* @__PURE__ */ new Date()).toLocaleString()}.`);
@@ -23181,16 +23198,53 @@ var EMPTY$1 = {
 };
 var key = (avatarId) => `companionMemory:${avatarId}`;
 var LOG$1 = "[character/memory]";
+function memoryUrl(avatarId) {
+	return `${ZEROWEIGHT_API}/local/memory/${encodeURIComponent(avatarId || "default")}`;
+}
 async function loadMemory(avatarId) {
+	try {
+		const r = await fetch(memoryUrl(avatarId));
+		if (r.ok) {
+			const stored = await r.json();
+			return {
+				...EMPTY$1,
+				...stored,
+				pending: stored?.pending ?? []
+			};
+		}
+	} catch (error) {
+		console.warn(LOG$1, "docker memory get failed", error);
+	}
 	const stored = (await chrome.storage.local.get(key(avatarId)))[key(avatarId)];
-	return {
+	const mem = {
 		...EMPTY$1,
 		...stored,
 		pending: stored?.pending ?? []
 	};
+	if (stored) {
+		await saveMemory(avatarId, mem);
+		await chrome.storage.local.remove(key(avatarId));
+	}
+	return mem;
 }
 async function saveMemory(avatarId, memory) {
-	await chrome.storage.local.set({ [key(avatarId)]: memory });
+	const r = await fetch(memoryUrl(avatarId), {
+		method: "PUT",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(memory)
+	});
+	if (!r.ok) throw new Error(`memory save HTTP ${r.status}`);
+}
+/** Wipe long-term + pending memory so a cleared history cannot leak into the next chat. */
+async function clearAllCompanionMemory() {
+	try {
+		await fetch(`${ZEROWEIGHT_API}/local/memory`, { method: "DELETE" });
+	} catch (error) {
+		console.warn(LOG$1, "docker memory clear failed", error);
+	}
+	const all = await chrome.storage.local.get(null);
+	const keys = Object.keys(all).filter((k) => k.startsWith("companionMemory:"));
+	if (keys.length) await chrome.storage.local.remove(keys);
 }
 /** What goes into her prompt: the profile, and earlier chats' exchanges not yet in it */
 function memoryForPrompt(memory, currentChatId) {
@@ -25006,12 +25060,24 @@ function useCharacter(settings, onVoiceMessage) {
 	const status = !configured ? { state: "off" } : loaded?.id === loadId ? loaded.status : { state: "loading" };
 	const ready = status.state === "ready";
 	(0, import_react.useEffect)(() => {
-		chrome.storage.local.get(PREFS_KEY).then((r) => {
-			setPrefs({
-				...DEFAULT_PREFS,
-				...r[PREFS_KEY]
+		(async () => {
+			try {
+				const r = await fetch(`${ZEROWEIGHT_API}/local/prefs`);
+				if (r.ok) {
+					const d = await r.json();
+					if (d.characterPrefs && typeof d.characterPrefs === "object") {
+						setPrefs({ ...DEFAULT_PREFS, ...d.characterPrefs });
+						return;
+					}
+				}
+			} catch {}
+			chrome.storage.local.get(PREFS_KEY).then((r) => {
+				setPrefs({
+					...DEFAULT_PREFS,
+					...r[PREFS_KEY]
+				});
 			});
-		});
+		})();
 	}, []);
 	const updatePrefs = (0, import_react.useCallback)((patch) => {
 		setPrefs((current) => {
@@ -25020,6 +25086,11 @@ function useCharacter(settings, onVoiceMessage) {
 				...patch
 			};
 			chrome.storage.local.set({ [PREFS_KEY]: next });
+			fetch(`${ZEROWEIGHT_API}/local/prefs`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ characterPrefs: next })
+			}).catch(() => {});
 			return next;
 		});
 	}, []);
@@ -29571,6 +29642,7 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 	const [localRec, setLocalRec] = (0, import_react.useState)({});
 	const [previewBusy, setPreviewBusy] = (0, import_react.useState)(false);
 	const [previewMsg, setPreviewMsg] = (0, import_react.useState)("");
+	const personaSaveRef = (0, import_react.useRef)(null);
 	const applyCatalog = (c, keepRec) => {
 		setCatalog(c);
 		if (keepRec) return;
@@ -29716,9 +29788,10 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 		try {
 			try {
 				await saveLocalRuntime();
+				if (personaSaveRef.current) await personaSaveRef.current();
 			} catch (error) {
 				console.error("[ConfigPanel] local settings", error);
-				setPreviewMsg(`Lưu Não/Giọng lỗi: ${error.message || error}`);
+				setPreviewMsg(`Lưu Não/Giọng/tính cách lỗi: ${error.message || error}`);
 				return;
 			}
 			await onSave({
@@ -29735,7 +29808,7 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 		}
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex flex-col gap-4 p-4 relative",
+		className: "flex flex-col gap-4 p-4 relative h-screen overflow-y-auto",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "flex items-center justify-between",
@@ -29836,6 +29909,10 @@ function ConfigPanel({ config, keyError, onSave, onClose }) {
 					})
 				})
 			] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PersonaSettings, {
+				avatarId,
+				saveRef: personaSaveRef
+			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "flex gap-2 mt-2",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
@@ -30105,23 +30182,83 @@ function toChat(record) {
 		}]
 	};
 }
-/** Insert or update a chat (by its id) */
+/** Insert or update a chat (by its id). Always keep IndexedDB; Docker is best-effort. */
 async function saveSession(chat) {
-	await (await getDB()).put("sessions", chat);
+	try {
+		await (await getDB()).put("sessions", chat);
+	} catch (error) {
+		console.warn("[sessions] idb put", error);
+	}
+	try {
+		await fetch(`${ZEROWEIGHT_API}/local/sessions/${encodeURIComponent(chat.id)}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(chat)
+		});
+	} catch (error) {
+		console.warn("[sessions] docker put", error);
+	}
 }
-/** List chats, newest first */
+/** List chats, newest first. Merge Docker + IndexedDB; never wipe IDB on empty Docker. */
 async function listSessions() {
-	return (await (await getDB()).getAllFromIndex("sessions", "by-created")).reverse().map(toChat);
+	const byId = new Map();
+	const add = (rec) => {
+		const chat = toChat(rec);
+		if (!chat?.id) return;
+		const prev = byId.get(chat.id);
+		const turns = chat.turns?.length || 0;
+		const prevTurns = prev?.turns?.length || 0;
+		if (!prev || turns > prevTurns || turns === prevTurns && (chat.createdAt || 0) >= (prev.createdAt || 0)) byId.set(chat.id, chat);
+	};
+	try {
+		const r = await fetch(`${ZEROWEIGHT_API}/local/sessions`);
+		if (r.ok) {
+			const data = await r.json();
+			for (const rec of data.sessions || []) add(rec);
+		}
+	} catch {}
+	try {
+		const old = await (await getDB()).getAllFromIndex("sessions", "by-created");
+		for (const rec of old) add(rec);
+	} catch {}
+	return [...byId.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 }
 async function getSession(id) {
+	try {
+		const r = await fetch(`${ZEROWEIGHT_API}/local/sessions/${encodeURIComponent(id)}`);
+		if (r.ok) return toChat(await r.json());
+	} catch {}
 	const record = await (await getDB()).get("sessions", id);
 	return record && toChat(record);
 }
+async function forgetPendingForChat(chatId) {
+	try {
+		await fetch(`${ZEROWEIGHT_API}/local/memory/forget-chat`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ chatId })
+		});
+	} catch (error) {
+		console.warn("[character/memory] forget-chat failed", error);
+	}
+}
 async function deleteSession(id) {
-	await (await getDB()).delete("sessions", id);
+	try {
+		await fetch(`${ZEROWEIGHT_API}/local/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
+	} catch {}
+	try {
+		await (await getDB()).delete("sessions", id);
+	} catch {}
+	await forgetPendingForChat(id);
 }
 async function clearSessions() {
-	await (await getDB()).clear("sessions");
+	try {
+		await fetch(`${ZEROWEIGHT_API}/local/sessions`, { method: "DELETE" });
+	} catch {}
+	try {
+		await (await getDB()).clear("sessions");
+	} catch {}
+	await clearAllCompanionMemory();
 }
 //#endregion
 //#region src/lib/agentError.ts
@@ -52373,6 +52510,131 @@ function timeAgo(ts) {
 	const hours = Math.floor(minutes / 60);
 	if (hours < 24) return `${hours}h ago`;
 	return `${Math.floor(hours / 24)}d ago`;
+}
+var RELATIONSHIP_STAGES = [
+	["stranger", "Người lạ"],
+	["acquaintance", "Quen biết"],
+	["friend", "Bạn"],
+	["close_friend", "Bạn thân"],
+	["best_friend", "Bạn rất thân"],
+	["crush", "Crush"],
+	["lover", "Người yêu"],
+	["soulmate", "Soulmate"]
+];
+function PersonaSettings({ avatarId, saveRef }) {
+	const [rec, setRec] = (0, import_react.useState)(null);
+	const [msg, setMsg] = (0, import_react.useState)("");
+	const [busy, setBusy] = (0, import_react.useState)(false);
+	const [open, setOpen] = (0, import_react.useState)(true);
+	(0, import_react.useEffect)(() => {
+		if (!avatarId) return;
+		fetch(`${ZEROWEIGHT_API}/local/persona/${encodeURIComponent(avatarId)}`).then((r) => r.json()).then(setRec).catch((e) => setMsg(String(e)));
+	}, [avatarId]);
+	const set = (k) => (e) => setRec((c) => ({ ...c, [k]: e.target.value }));
+	const save = async () => {
+		if (!avatarId || !rec) return;
+		setBusy(true);
+		setMsg("");
+		try {
+			const r = await fetch(`${ZEROWEIGHT_API}/local/persona/${encodeURIComponent(avatarId)}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					display_name: rec.display_name,
+					persona_prompt: rec.persona_prompt,
+					persona_knowledge: rec.persona_knowledge,
+					relationship_stage: rec.relationship_stage,
+					chat_mode: rec.chat_mode
+				})
+			});
+			if (!r.ok) throw new Error("HTTP " + r.status);
+			try {
+				const cache = await caches.open(PERSONA_CACHE);
+				await cache.delete(`${ZEROWEIGHT_API}/avatars/${encodeURIComponent(avatarId)}/persona`);
+			} catch {}
+			setMsg("Đã lưu tính cách. Chat sau dùng bản mới.");
+		} catch (error) {
+			setMsg(String(error.message || error));
+		} finally {
+			setBusy(false);
+		}
+	};
+	if (saveRef) saveRef.current = save;
+	const promptRows = Math.max(16, String(rec?.persona_prompt || "").split("\n").length + 1);
+	const knowRows = Math.max(16, String(rec?.persona_knowledge || "").split("\n").length + 1);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-2 pt-3 mt-1 border-t border-border/50",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				type: "button",
+				onClick: () => setOpen(!open),
+				className: "flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer font-semibold",
+				children: ["Tính cách nhân vật", open ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FoldVertical, { className: "size-3" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(UnfoldVertical, { className: "size-3" })]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "space-y-3 text-sm",
+			children: [
+				!rec && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted-foreground text-xs", children: "Đang tải…" }),
+				rec && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "block space-y-1", children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-[11px] text-muted-foreground", children: "Tên hiển thị" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							className: "w-full rounded-md border bg-background px-2 py-1.5 text-sm",
+							value: rec.display_name || "",
+							onChange: set("display_name")
+						})
+					] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "block space-y-1", children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-[11px] text-muted-foreground", children: "Mối quan hệ" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+							className: "w-full rounded-md border bg-background px-2 py-1.5 text-sm",
+							value: rec.relationship_stage || "stranger",
+							onChange: set("relationship_stage"),
+							children: RELATIONSHIP_STAGES.map(([id, label]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: id, children: label }, id))
+						})
+					] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "block space-y-1", children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-[11px] text-muted-foreground", children: "Chế độ chat" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+							className: "w-full rounded-md border bg-background px-2 py-1.5 text-sm",
+							value: rec.chat_mode || "chat",
+							onChange: set("chat_mode"),
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "chat", children: "Chat thường" }),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "romance", children: "Romance" }),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "roleplay", children: "Roleplay" })
+							]
+						})
+					] }),
+					open && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "block space-y-1", children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-[11px] text-muted-foreground", children: "Persona prompt (kéo trang Settings để đọc hết)" }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", {
+								className: "w-full rounded-md border bg-background px-2 py-1.5 text-xs font-mono leading-relaxed",
+								spellCheck: false,
+								rows: promptRows,
+								style: { overflow: "hidden", height: "auto" },
+								value: rec.persona_prompt || "",
+								onChange: set("persona_prompt")
+							})
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "block space-y-1", children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-[11px] text-muted-foreground", children: "Knowledge (kéo trang Settings để đọc hết)" }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", {
+								className: "w-full rounded-md border bg-background px-2 py-1.5 text-xs font-mono leading-relaxed",
+								spellCheck: false,
+								rows: knowRows,
+								style: { overflow: "hidden", height: "auto" },
+								value: rec.persona_knowledge || "",
+								onChange: set("persona_knowledge")
+							})
+						] })
+					] })
+				] }),
+				msg && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-xs text-muted-foreground", children: msg })
+			]
+		})
+	] });
 }
 function HistoryList({ onSelect, onBack, onRerun }) {
 	const [sessions, setSessions] = (0, import_react.useState)([]);

@@ -55,6 +55,13 @@ if (-not (Test-DockerEngine)) {
 }
 Write-Host "Docker engine ready."
 
+Write-Step "NVIDIA / CUDA (GPU TTS)"
+& (Join-Path $PSScriptRoot "install-cuda.ps1")
+$smi = Get-Command nvidia-smi -ErrorAction SilentlyContinue
+if (-not $smi) {
+    Write-Host "WARNING: no nvidia-smi. docker compose gpus:all may fail. Chat still works."
+}
+
 Write-Step "Docker Desktop auto-start at logon"
 $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
 $dd = "C:\Program Files\Docker\Docker\Docker Desktop.exe"

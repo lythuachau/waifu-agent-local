@@ -28,6 +28,8 @@ import codex_llm
 import jev_brain
 import vision_ocr
 import vieneu_tts
+import memory_store
+import user_store
 
 log = logging.getLogger("zw.local")
 
@@ -107,21 +109,30 @@ def any_key(_x_zw_api_key: str | None, authorization: str | None) -> str:
 
 def persona_for(avatar_id: str) -> dict:
     if avatar_id in PERSONAS:
-        return PERSONAS[avatar_id]
-    name = next((a["name"] for a in AVATARS if a["id"] == avatar_id), avatar_id)
-    return {
-        "avatar_id": avatar_id,
-        "display_name": name,
-        "persona_prompt": f"You are {name}, a browser companion. Match the user's language. Keep replies short. Never invent facts.",
-        "persona_knowledge": "Local self-hosted companion.",
-        "actions": {
-            "wave_hand": {"display_name": "Wave", "description": "Greeting wave."},
-            "speaking": {"display_name": "Speaking", "description": "Talking."},
-            "listening": {"display_name": "Listening", "description": "Idle."},
-        },
-        "voice_id": f"{avatar_id}-local",
-        "voice_provider": "minimax",
-    }
+        rec = dict(PERSONAS[avatar_id])
+    else:
+        name = next((a["name"] for a in AVATARS if a["id"] == avatar_id), avatar_id)
+        rec = {
+            "avatar_id": avatar_id,
+            "display_name": name,
+            "persona_prompt": f"You are {name}, a browser companion. Match the user's language. Keep replies short. Never invent facts.",
+            "persona_knowledge": "Local self-hosted companion.",
+            "actions": {
+                "wave_hand": {"display_name": "Wave", "description": "Greeting wave."},
+                "speaking": {"display_name": "Speaking", "description": "Talking."},
+                "listening": {"display_name": "Listening", "description": "Idle."},
+            },
+            "voice_id": f"{avatar_id}-local",
+            "voice_provider": "minimax",
+        }
+    over = user_store.load_persona(avatar_id)
+    for k in ("display_name", "persona_prompt", "persona_knowledge", "relationship_stage", "chat_mode"):
+        val = over.get(k)
+        if val:
+            rec[k] = val
+    rec.setdefault("relationship_stage", "stranger")
+    rec.setdefault("chat_mode", "chat")
+    return rec
 
 
 def local_image(avatar_id: str) -> str:
@@ -1667,6 +1678,87 @@ async def local_codex_login_poll():
 @app.post("/api/v1/local/codex/logout")
 def local_codex_logout():
     return codex_llm.logout()
+
+
+@app.get("/api/v1/local/memory/{avatar_id}")
+def local_memory_get(avatar_id: str):
+    return memory_store.load(avatar_id)
+
+
+@app.put("/api/v1/local/memory/{avatar_id}")
+@app.post("/api/v1/local/memory/{avatar_id}")
+def local_memory_put(avatar_id: str, body: dict | None = None):
+    return memory_store.save(avatar_id, body or {})
+
+
+@app.delete("/api/v1/local/memory/{avatar_id}")
+def local_memory_delete(avatar_id: str):
+    memory_store.delete(avatar_id)
+    return {"ok": True}
+
+
+@app.delete("/api/v1/local/memory")
+def local_memory_delete_all():
+    return {"ok": True, "n": memory_store.delete_all()}
+
+
+@app.post("/api/v1/local/memory/forget-chat")
+def local_memory_forget_chat(body: dict | None = None):
+    chat_id = str((body or {}).get("chatId") or "")
+    return {"ok": True, "n": memory_store.forget_chat(chat_id)}
+
+
+@app.get("/api/v1/local/persona/{avatar_id}")
+def local_persona_get(avatar_id: str):
+    return persona_for(avatar_id)
+
+
+@app.put("/api/v1/local/persona/{avatar_id}")
+@app.post("/api/v1/local/persona/{avatar_id}")
+def local_persona_put(avatar_id: str, body: dict | None = None):
+    user_store.save_persona(avatar_id, body or {})
+    return persona_for(avatar_id)
+
+
+@app.get("/api/v1/local/prefs")
+def local_prefs_get():
+    return user_store.load_prefs()
+
+
+@app.put("/api/v1/local/prefs")
+@app.post("/api/v1/local/prefs")
+def local_prefs_put(body: dict | None = None):
+    return user_store.save_prefs(body or {})
+
+
+@app.get("/api/v1/local/sessions")
+def local_sessions_list():
+    return {"sessions": user_store.list_sessions()}
+
+
+@app.get("/api/v1/local/sessions/{chat_id}")
+def local_sessions_get(chat_id: str):
+    rec = user_store.get_session(chat_id)
+    if not rec:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return rec
+
+
+@app.put("/api/v1/local/sessions/{chat_id}")
+@app.post("/api/v1/local/sessions/{chat_id}")
+def local_sessions_put(chat_id: str, body: dict | None = None):
+    return user_store.save_session(chat_id, body or {})
+
+
+@app.delete("/api/v1/local/sessions/{chat_id}")
+def local_sessions_delete(chat_id: str):
+    user_store.delete_session(chat_id)
+    return {"ok": True}
+
+
+@app.delete("/api/v1/local/sessions")
+def local_sessions_clear():
+    return {"ok": True, "n": user_store.delete_all_sessions()}
 
 
 @app.post("/api/v1/local/ocr")

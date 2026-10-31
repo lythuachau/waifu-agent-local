@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
 Write-Host "Docker path (recommended):"
-Write-Host "  1. Install Docker Desktop (WSL2)"
+Write-Host "  1. Install Docker Desktop (WSL2) + NVIDIA GPU (setup-docker.ps1 installs CUDA if missing)"
 Write-Host "  2. Copy server\static\zai from Drive waifu-agent-runtime/zai or the old PC"
 Write-Host "  3. Codex: side panel Cài đặt → Não → Đăng nhập Codex"
 Write-Host "  4. .\scripts\setup-docker.ps1"

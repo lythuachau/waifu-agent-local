@@ -6,7 +6,7 @@ Không đưa `zw_key.txt` vào image.
 
 ## Máy mới (một lần)
 
-1. Cài [Docker Desktop](https://www.docker.com/products/docker-desktop/) (WSL2) và Git.
+1. Cài [Docker Desktop](https://www.docker.com/products/docker-desktop/) (WSL2) và Git. Máy cần **GPU NVIDIA** cho TTS. `setup-docker.ps1` gọi `scripts/install-cuda.ps1`: có card mà chưa `nvidia-smi` thì `winget install Nvidia.CUDA`. Không có NVIDIA thì chat vẫn chạy, TTS GPU không chạy.
 2. Clone repo private, copy `.zai` (Drive `waifu-agent-runtime/zai` hoặc USB) vào `server/static/zai`.
 3. Codex: trong side panel → Cài đặt → Não → **Đăng nhập Codex** (mã trên https://auth.openai.com/codex/device), hoặc `codex login` trên Windows. File `%USERPROFILE%\.codex\auth.json` được mount vào container.
 4. Chạy:
@@ -19,6 +19,7 @@ cd <clone>\self-host
 Script sẽ:
 
 - bật Docker Desktop nếu chưa chạy
+- cài CUDA/driver nếu GPU NVIDIA chưa có `nvidia-smi`
 - ghi `.env` (não **Codex**, không Ollama)
 - `docker compose build` + `up -d`
 - ghi Run key + file Startup `WaifuAgent-Docker.cmd` (logon, không cần admin)
