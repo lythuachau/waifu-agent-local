@@ -10,7 +10,7 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 Write-Host "Docker path (recommended):"
 Write-Host "  1. Install Docker Desktop (WSL2)"
 Write-Host "  2. Copy server\static\zai from Drive waifu-agent-runtime/zai or the old PC"
-Write-Host "  3. optional: codex login"
+Write-Host "  3. Codex: side panel Cài đặt → Não → Đăng nhập Codex"
 Write-Host "  4. .\scripts\setup-docker.ps1"
 Write-Host "  5. Chrome Load unpacked: $(Join-Path (Get-Location) 'extension')"
 Write-Host "Details: DOCKER.md"
@@ -29,9 +29,7 @@ if (Test-Path "E:\ll\cuda13-runtime\bin") {
 }
 
 Write-Host "Next:"
-Write-Host "  1. ollama serve && ollama pull llama3.2"
-Write-Host "  2. optional: ollama pull llava   (heavy vision)"
-Write-Host "  3. optional: codex login"
-Write-Host "  4. .\start.ps1"
-Write-Host "  5. Chrome Load unpacked: $(Join-Path (Get-Location) 'extension')"
-Write-Host "First VieNeu TTS downloads ONNX from Hugging Face (~once)."
+Write-Host "  1. Codex login (side panel Cài đặt → Não)"
+Write-Host "  2. .\start.ps1"
+Write-Host "  3. Chrome Load unpacked: $(Join-Path (Get-Location) 'extension')"
+Write-Host "First VieNeu TTS downloads weights from Hugging Face (~once)."

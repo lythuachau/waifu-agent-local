@@ -15,6 +15,7 @@ server/data/clone-check/*.mp3
 server/data/clone-check/*.wav
 server/static/zai/
 sample.zai
+server/data/cuda_fail.json
 
 # probe / debug leftovers
 *.stderr.txt

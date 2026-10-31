@@ -6,9 +6,11 @@ Clone is from 5–8 s ZeroTTS WAVs, not from voice.npz latents.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
+import time
 from pathlib import Path
 
 import numpy as np
@@ -34,15 +36,53 @@ SPEAKERS = (
 _engine = None
 _lock = threading.Lock()
 _error: str | None = None
+_cuda_dead = False
+CUDA_FAIL_PATH = DATA / "cuda_fail.json"
+USER_CUDA_MSG = "GPU TTS đứt, đang khởi động lại Docker. Chờ khoảng 1 phút rồi nói lại."
 
 
 def available() -> bool:
     return all((REFS / f"{name}.wav").exists() for name, _label, _g in SPEAKERS)
 
 
+def is_cuda_error(exc: BaseException | str) -> bool:
+    s = str(exc).lower()
+    return any(k in s for k in ("cuda", "cublas", "cudnn", "nvrtc", "gpu tts đứt"))
+
+
+def cuda_is_dead() -> bool:
+    return _cuda_dead
+
+
+def fail_cuda(exc: BaseException | str) -> str:
+    global _engine, _error, _cuda_dead
+    with _lock:
+        _engine = None
+        _cuda_dead = True
+        _error = str(exc)
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
+        try:
+            CUDA_FAIL_PATH.write_text(
+                json.dumps({"at": time.time(), "error": _error, "restart": True}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+        log.warning("VieNeu CUDA dead, requested docker restart: %s", _error)
+    return USER_CUDA_MSG
+
+
 def reset_engine() -> None:
     global _engine, _error
     with _lock:
+        if _cuda_dead:
+            return
         _engine = None
         _error = None
         try:
@@ -75,6 +115,7 @@ def status() -> dict:
     return {
         "loaded": _engine is not None,
         "error": _error,
+        "cuda_dead": _cuda_dead,
         "backend": getattr(_engine, "backend", None) if _engine is not None else None,
         "device": _engine_device(),
         "want_cuda": want_cuda(),
@@ -84,8 +125,10 @@ def status() -> dict:
 
 
 def get_engine():
-    global _engine, _error
+    global _engine, _error, _cuda_dead
     with _lock:
+        if _cuda_dead:
+            raise RuntimeError(USER_CUDA_MSG)
         if _engine is not None:
             return _engine
         from vieneu import Vieneu
@@ -110,6 +153,16 @@ def get_engine():
         except Exception as e:
             _error = str(e)
             log.exception("VieNeu load failed")
+            if is_cuda_error(e):
+                _cuda_dead = True
+                try:
+                    CUDA_FAIL_PATH.write_text(
+                        json.dumps({"at": time.time(), "error": _error, "restart": True}, ensure_ascii=False),
+                        encoding="utf-8",
+                    )
+                except Exception:
+                    pass
+                raise RuntimeError(USER_CUDA_MSG) from e
             raise
         loaded = _load_cloned(tts)
         if loaded:
@@ -134,6 +187,12 @@ def get_engine():
                 log.info("VieNeu cloned voices=%s saved=%s", cloned, VOICES_JSON)
         _engine = tts
         _error = None
+        _cuda_dead = False
+        try:
+            if CUDA_FAIL_PATH.exists():
+                CUDA_FAIL_PATH.unlink()
+        except Exception:
+            pass
         return _engine
 
 

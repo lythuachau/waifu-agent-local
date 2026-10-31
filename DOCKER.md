@@ -19,11 +19,12 @@ cd <clone>\self-host
 Script sẽ:
 
 - bật Docker Desktop nếu chưa chạy
-- ghi `.env` (Ollama trên máy nếu có, không thì Ollama trong Compose + `ollama pull llama3.2`)
+- ghi `.env` (não **Codex**, không Ollama)
 - `docker compose build` + `up -d`
 - ghi Run key + file Startup `WaifuAgent-Docker.cmd` (logon, không cần admin)
 - scheduled task cùng tên nếu Windows cho phép
 - ghi Run key Docker Desktop để engine lên cùng Windows
+- khởi động `cuda-watch.ps1` (CUDA fail → `docker restart` tối đa 1 lần / 10 phút)
 - đợi `http://127.0.0.1:8787/healthz`
 
 Chrome → Load unpacked → thư mục `extension`. Side panel key = `local`.
@@ -36,7 +37,8 @@ Không cần gõ lệnh. Chuỗi là:
 2. `WaifuAgent-Docker` (Startup folder + Run key) → `scripts/docker-autostart.ps1` → `docker compose up -d`
 3. Container `restart: unless-stopped` cũng tự lên khi engine sẵn sàng
 
-Log autostart: `%LOCALAPPDATA%\waifu-agent\docker-autostart.log`
+Log autostart: `%LOCALAPPDATA%\waifu-agent\docker-autostart.log`  
+Log CUDA watch: `%LOCALAPPDATA%\waifu-agent\cuda-watch.log`
 
 ## Lệnh thường dùng
 
@@ -48,19 +50,7 @@ docker compose up -d         # chạy lại
 .\scripts\setup-docker.ps1 -SkipBuild   # chỉ up + task, không build lại
 ```
 
-Ollama nhúng (máy không có Ollama Windows):
-
-```powershell
-.\scripts\setup-docker.ps1 -BundledOllama
-```
-
-TTS mặc định **GPU** (VieNeu PyTorch CUDA + ZeroTTS ORT CUDA). Compose có `gpus: all`. Image CPU: `docker compose build --file Dockerfile.cpu`.
-
-GPU cho Ollama trong container:
-
-```powershell
-docker compose --profile bundled-ollama -f docker-compose.yml -f docker-compose.gpu.yml up -d
-```
+Não mặc định **Codex** (không Ollama). TTS mặc định **GPU** (VieNeu PyTorch CUDA). Compose có `gpus: all`. Image CPU: `docker compose build --file Dockerfile.cpu`.
 
 ## Volume
 

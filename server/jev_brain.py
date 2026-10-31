@@ -255,9 +255,8 @@ async def answer_jev(body: dict, chat_fn, extract_json, logged_in: bool, llm_bac
     if not questions or _is_ping(questions):
         return fallback, "regex"
     tries = []
-    if llm_backend != "ollama" and logged_in:
+    if logged_in:
         tries.append("codex")
-    tries.append("ollama")
     prompt = build_jev_prompt(body)
     for brain in tries:
         payload = {

@@ -41,4 +41,14 @@ Write-Log "docker compose up -d"
 docker compose up -d --remove-orphans 2>&1 | ForEach-Object { Write-Log "$_" }
 $code = $LASTEXITCODE
 Write-Log "compose exit=$code"
+
+$watch = Join-Path $PSScriptRoot "cuda-watch.ps1"
+$already = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match "powershell|pwsh" -and $_.CommandLine -like "*cuda-watch.ps1*" }
+if ($already) {
+    Write-Log "cuda-watch already running"
+} elseif (Test-Path $watch) {
+    Write-Log "starting cuda-watch"
+    Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", $watch) -WindowStyle Hidden
+}
 exit $code

@@ -9,7 +9,7 @@ What this stack replaces, and what it cannot:
 | `GET /avatars/system` + `/mine` | 9 public system companions, covers saved under `server/static/avatars/` |
 | `GET /avatars/{id}/persona` | `server/data/personas.json` (edit these) |
 | `GET /avatars/bundle/{id}` | Offline `SignedPayloadToken` (exp 2099) pointing at `http://127.0.0.1:8787/static/zai/{id}/*.zai` |
-| `/llm`, `/companion`, `/vision` | OpenAI-compatible proxy → Ollama, or Codex (ChatGPT login on this PC) |
+| `/llm`, `/companion`, `/vision` | Codex (ChatGPT login on this PC) |
 | `/jev/systemone` | Heuristic stub (routes chat vs task; `act` returns `none` so the LLM uses index tools) |
 | speech `wss://` TTS | Local websocket `/speech/tts`: cartesia = pcm_f32le @ 44100, minimax = mp3 (edge-tts + ffmpeg) |
 | speech STT | Local websocket `/speech/stt`: faster-whisper on PCM16 @ 16 kHz. VAD (`ten_vad.wasm`) stays in the CRX |
@@ -22,11 +22,7 @@ Animated avatars run fully offline. `offline_pack.py` downloaded the 9 system `.
 - Python 3.11+
 - Chrome (load unpacked)
 - ZeroTTS Python package from `https://github.com/lythuachau/ZeroTTS` (pulled by `start.ps1` via `server/requirements.txt`; not PyPI)
-- An LLM backend:
-  - Default brain: **Codex** (`codex login`) for Jev + agent; Ollama then regex if Codex fails
-  - Ollama fallback: `ollama serve` then `ollama pull llama3.2`. Smarter local: `ollama pull qwen2.5:7b` and pick it at `/settings`
-  - Offline: `/settings` → Backend **Ollama only**
-  - LM Studio: local server on `http://127.0.0.1:1234/v1`
+- An LLM backend: **Codex** (`codex login` or side panel Cài đặt → Não). Ollama is off.
 
 ## 1. Build the local extension (once)
 
@@ -53,10 +49,7 @@ That builds the image, `docker compose up -d`, and registers scheduled task `Wai
 ```powershell
 cd E:\ll\waifu-agent-extract\self-host
 # optional:
-# $env:LLM_BASE_URL = "http://127.0.0.1:11434/v1"
-# $env:LLM_MODEL = "llama3.2"
-# $env:LLM_API_KEY = "ollama"
-# $env:TTS_VOICE = "ja-JP-NanamiNeural"
+# $env:TTS_DEVICE = "cuda"
 .\start.ps1
 ```
 
@@ -64,7 +57,7 @@ If the `waifu-agent` container is already up, `start.ps1` exits and leaves Docke
 
 Check `http://127.0.0.1:8787/` → `{"message":"AI Avatar Public Service Running","local":true,...}`
 
-Pick the LLM and voice at `http://127.0.0.1:8787/settings` (Ollama vs Codex, model list, per-avatar TTS).
+Pick the voice at `http://127.0.0.1:8787/settings` (Codex brain, per-avatar TTS).
 
 ## 3. Load the extension
 

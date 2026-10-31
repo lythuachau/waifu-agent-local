@@ -25202,7 +25202,7 @@ function useCharacter(settings, onVoiceMessage) {
 			if (message?.type !== "AVATAR_EVENT") return;
 			if (sender.tab?.id !== shownTabRef.current) return;
 			if (message.event === "closed") {
-				updatePrefs({ avatarVisible: false });
+				updatePrefs({ avatarVisible: false, avatarAlwaysOn: false });
 				return;
 			}
 			if (message.event === "failed") {
@@ -25291,9 +25291,15 @@ function useCharacter(settings, onVoiceMessage) {
 				windowId
 			});
 			if (active?.id != null && canHost(active)) {
+				if (!prefs.avatarAlwaysOn) {
+					for (const t of hosts) {
+						if (t.id != null && t.id !== active.id) zwSendAvatar(t.id, { action: "hide" });
+					}
+				}
 				await showOn(active.id);
 				return;
 			}
+			if (!prefs.avatarAlwaysOn) return;
 			for (const t of hosts) await showOn(t.id, { keepOthers: true });
 			if (hosts[0]?.id != null) {
 				shownTabRef.current = hosts[0].id;
@@ -25321,7 +25327,7 @@ function useCharacter(settings, onVoiceMessage) {
 				showOn(tabId);
 				return;
 			}
-			showOn(tabId, { keepOthers: true });
+			if (prefs.avatarAlwaysOn) showOn(tabId, { keepOthers: true });
 		};
 		chrome.tabs.onActivated.addListener(onActivated);
 		chrome.tabs.onUpdated.addListener(onUpdated);
@@ -25461,11 +25467,12 @@ function useCharacter(settings, onVoiceMessage) {
 		const playback = playbackRef.current;
 		if (!playback) {
 			setNotice("Chưa sẵn sàng TTS.");
-			return;
+			return "Chưa sẵn sàng TTS.";
 		}
 		const n = Math.min(50, Math.max(1, Number(count) || 5));
 		let pendingBody = "";
 		let keepNotice = false;
+		let lastError = null;
 		/** @type {{ index: number, buffer: Promise<AudioBuffer|null>, body: string } | null} */
 		let prepared = null;
 		const grabBody = async (tabId, prevHead, tries, delayMs) => {
@@ -25482,6 +25489,7 @@ function useCharacter(settings, onVoiceMessage) {
 		};
 		const fail = (message) => {
 			keepNotice = true;
+			lastError = message;
 			setNotice(message);
 		};
 		const openNext = async (tabId, next) => {
@@ -25627,15 +25635,19 @@ function useCharacter(settings, onVoiceMessage) {
 			await playing;
 		}
 		if (!keepNotice) setNotice(null);
+		return lastError;
 	}, []);
 	return {
 		configured,
 		status,
 		layer,
 		avatarVisible: prefs.avatarVisible,
-		setAvatarVisible: (avatarVisible) => updatePrefs({ avatarVisible }),
+		setAvatarVisible: (avatarVisible) => updatePrefs({ avatarVisible, avatarAlwaysOn: avatarVisible ? prefs.avatarAlwaysOn : false }),
 		avatarAlwaysOn: !!prefs.avatarAlwaysOn,
-		setAvatarAlwaysOn: (avatarAlwaysOn) => updatePrefs({ avatarAlwaysOn }),
+		toggleAvatarPin: () => updatePrefs({
+			avatarVisible: true,
+			avatarAlwaysOn: !prefs.avatarAlwaysOn
+		}),
 		voiceMuted: prefs.voiceMuted,
 		setVoiceMuted: (voiceMuted) => {
 			if (voiceMuted) playbackRef.current?.stop();
@@ -25649,6 +25661,11 @@ function useCharacter(settings, onVoiceMessage) {
 		/** The message being spoken, for its stop button; `stopSpeaking` silences her */
 		speakingMessage,
 		stopSpeaking,
+		speakError: (text) => {
+			const playback = playbackRef.current;
+			if (!playback || prefs.voiceMuted || !text) return;
+			playback.say([{ text }], { text });
+		},
 		notice,
 		clearNotice: () => setNotice(null),
 		voice: {
@@ -29173,7 +29190,6 @@ function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, pr
 		className: "text-[11px] text-destructive",
 		children: `Không tải được catalog: ${catalog.error}`
 	});
-	const ollama = localOptionList(catalog.ollama_models);
 	const codex = localOptionList((catalog.codex_models || []).map((id) => typeof id === "string" ? { id, label: id } : id));
 	const vis = localOptionList(catalog.vision_models);
 	const edges = localOptionList(catalog.edge_voices);
@@ -29184,7 +29200,7 @@ function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, pr
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
 			title: "Não",
-			info: "Codex + Ollama dự phòng. Jev cùng backend. Vision mặc định RapidOCR (nhẹ).",
+			info: "Não Codex. Vision mặc định RapidOCR (nhẹ).",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "rounded-md border border-input bg-input/30 p-2.5 flex flex-col gap-2",
@@ -29206,8 +29222,7 @@ function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, pr
 							children: [
 								cstat.plan ? `ChatGPT ${cstat.plan}` : "",
 								cstat.email ? ` · ${cstat.email}` : "",
-								cstat.last_ping && cstat.last_ping.ok ? ` · lần kiểm tra ${cstat.last_ping.ms} ms` : "",
-								ollama.length ? ` · Ollama ${ollama.length} model` : " · Ollama không thấy model"
+								cstat.last_ping && cstat.last_ping.ok ? ` · lần kiểm tra ${cstat.last_ping.ms} ms` : ""
 							].filter(Boolean).join("") || "Chưa có phiên Codex trên máy này."
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -29274,11 +29289,7 @@ function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, pr
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
 								value: "codex",
-								children: "Codex (Jev + agent, Ollama dự phòng)"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
-								value: "ollama",
-								children: "Ollama only (offline)"
+								children: "Codex"
 							})
 						]
 					})
@@ -29297,20 +29308,7 @@ function LocalRuntimeSection({ catalog, rec, onChange, avatarId, previewBusy, pr
 						}, m.id))
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
-					label: "Model Ollama (dự phòng)",
-					htmlFor: "local-ollama",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
-						id: "local-ollama",
-						value: rec.ollama_model || "",
-						onChange: set("ollama_model"),
-						className: SELECT_CLASS,
-						children: ollama.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
-							value: m.id,
-							children: m.label
-						}, m.id))
-					})
-				}),
+
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
 					label: "Vision",
 					htmlFor: "local-vision",
@@ -63880,6 +63878,22 @@ function useAgent({ characterRef, moveAvatarRef }) {
 			updateLastTurn,
 			characterRef
 		]),
+		logChapterError: (0, import_react.useCallback)((task, message) => {
+			const spoken = `Đọc chương bị lỗi. ${message}`;
+			finishTurn(chatRef.current, {
+				task,
+				history: [],
+				status: "completed",
+				kind: "chat",
+				reply: {
+					messages: [{
+						text: spoken,
+						tts_text: spoken
+					}]
+				}
+			});
+			return spoken;
+		}, [finishTurn]),
 		startNewChat: (0, import_react.useCallback)(() => {
 			if (busyRef.current || agentRef.current?.status === "running") return;
 			updateChat(newChat(configRef.current?.avatarId));
@@ -63941,7 +63955,7 @@ function App() {
 	const textareaRef = (0, import_react.useRef)(null);
 	const characterRef = (0, import_react.useRef)(null);
 	const moveAvatarRef = (0, import_react.useRef)(null);
-	const { status, history, activity, currentTask, chat, pendingQuestion, liveQuestions, characterTyping, currentKind, config, keyError, send, startNewChat, stop, configure } = useAgent({
+	const { status, history, activity, currentTask, chat, pendingQuestion, liveQuestions, characterTyping, currentKind, config, keyError, send, startNewChat, stop, configure, logChapterError } = useAgent({
 		characterRef,
 		moveAvatarRef
 	});
@@ -64033,13 +64047,20 @@ function App() {
 		setReadingChapters(true);
 		unlockAudio();
 		try {
-			await character.readChapters(n, () => readingStopRef.current);
+			const err = await character.readChapters(n, () => readingStopRef.current);
+			if (err) {
+				const spoken = logChapterError(`Đọc ${n} chương`, err);
+				character.speakError(spoken);
+			}
 		} catch (error) {
 			console.error("[SidePanel] readChapters", error);
+			const msg = error instanceof Error ? error.message : String(error);
+			const spoken = logChapterError(`Đọc ${n} chương`, msg);
+			character.speakError(spoken);
 		} finally {
 			setReadingChapters(false);
 		}
-	}, [readingChapters, character, unlockAudio]);
+	}, [readingChapters, character, unlockAudio, logChapterError]);
 	const handleKeyDown = (e) => {
 		if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
 			e.preventDefault();
@@ -64074,7 +64095,7 @@ function App() {
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MotionOverlay, { active: isRunning }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
-				className: "flex items-center justify-between gap-2 border-b bg-sidebar px-3 py-1.5",
+				className: "relative z-20 flex items-center justify-between gap-2 border-b bg-sidebar px-3 py-1.5",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 					className: "min-w-0 truncate text-sm font-semibold text-brand-light",
 					title: character.status.state === "ready" ? character.status.name : void 0,
@@ -64084,18 +64105,10 @@ function App() {
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusDot, { status }),
 						character.configured && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AvatarButton, {
-							visible: character.avatarVisible,
+							pinned: character.avatarAlwaysOn,
+							hidden: !character.avatarVisible,
 							issue: character.avatarIssue,
-							onToggle: () => character.setAvatarVisible(!character.avatarVisible)
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-							variant: "ghost",
-							size: "icon-sm",
-							onClick: () => character.setAvatarAlwaysOn(!character.avatarAlwaysOn),
-							className: "cursor-pointer",
-							"aria-label": character.avatarAlwaysOn ? "Avatar luôn hiện trên web" : "Avatar chỉ hiện khi mở chat",
-							title: character.avatarAlwaysOn ? "Luôn hiện trên web — bấm để về như cũ (chỉ khi mở chat)" : "Như cũ: chỉ hiện khi mở chat — bấm để luôn hiện trên web",
-							"aria-pressed": character.avatarAlwaysOn,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pin, { className: character.avatarAlwaysOn ? "size-3.5 text-brand" : "size-3.5" })
+							onToggle: character.toggleAvatarPin
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 							variant: "ghost",
 							size: "icon-sm",
@@ -64269,17 +64282,18 @@ function App() {
 * blocks her, or she stopped rendering), the button carries a red dot and hovering it
 * says why: the page itself never shows an error.
 */
-function AvatarButton({ visible, issue, onToggle }) {
-	const label = visible ? "Hide avatar" : "Show avatar";
+function AvatarButton({ pinned, hidden, issue, onToggle }) {
+	const label = pinned ? "Ghim trên web — bấm để tắt ghim" : "Chưa ghim — bấm để luôn hiện trên web";
 	const button = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+		type: "button",
 		variant: "ghost",
 		size: "icon-sm",
 		onClick: onToggle,
-		className: "relative cursor-pointer",
+		className: pinned ? "relative z-20 cursor-pointer bg-brand/25" : "relative z-20 cursor-pointer",
 		"aria-label": issue ? `${label}. Not shown on this page: ${issue}` : label,
-		title: issue ? void 0 : label,
-		"aria-pressed": visible,
-		children: [visible ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(UserRound, { className: "size-3.5" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(UserRoundX, { className: "size-3.5 text-brand" }), issue && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "absolute top-1 right-1 size-1.5 rounded-full bg-destructive ring-2 ring-sidebar" })]
+		title: issue ? void 0 : (hidden ? `${label} (avatar đang tắt bằng X)` : label),
+		"aria-pressed": pinned,
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pin, { className: pinned ? "size-3.5 text-brand" : "size-3.5" }), issue && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "absolute top-1 right-1 size-1.5 rounded-full bg-destructive ring-2 ring-sidebar" })]
 	});
 	if (!issue) return button;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(HoverCard, {

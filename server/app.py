@@ -220,8 +220,8 @@ def load_settings() -> dict:
             rec.update(json.loads(SETTINGS_PATH.read_text(encoding="utf-8")))
         except Exception:
             pass
-    if rec.get("llm_backend") not in ("ollama", "codex"):
-        rec["llm_backend"] = "codex" if codex_llm.logged_in() else "ollama"
+    if rec.get("llm_backend") != "codex":
+        rec["llm_backend"] = "codex"
     rec["codex_model"] = rec.get("codex_model") or "gpt-6-luna"
     rec["ollama_model"] = rec.get("ollama_model") or LLM_MODEL
     rec["vision_model"] = rec.get("vision_model") or "ocr"
@@ -1014,28 +1014,28 @@ async def ollama_chat(payload: dict) -> JSONResponse:
 async def backend_chat(payload: dict, force: str | None = None) -> JSONResponse:
     rec = load_settings()
     backend = force or rec.get("llm_backend") or "codex"
-    if backend == "codex" and not codex_llm.logged_in():
-        backend = "ollama"
-    if backend == "codex":
-        try:
-            req_model = payload.get("model")
-            if req_model in (None, "", "zeroweight", rec.get("ollama_model"), LLM_MODEL):
-                req_model = rec.get("codex_model") or "gpt-6-luna"
-            data = await codex_llm.chat_completions({**payload, "model": req_model})
-            msg, content = message_content(data)
-            if msg.get("tool_calls") or content:
-                return JSONResponse(data)
-            log.warning("codex empty reply, fallback ollama")
-        except Exception as e:
-            log.warning("codex backend_chat failed: %s", e)
-            if force == "codex":
-                return JSONResponse({"error": {"message": str(e)}}, status_code=502)
-        else:
-            if force == "codex":
-                return JSONResponse({"error": {"message": "Codex returned an empty reply."}}, status_code=502)
-    ollama_payload = dict(payload)
-    ollama_payload["model"] = rec.get("ollama_model") or LLM_MODEL
-    return await ollama_chat(ollama_payload)
+    if backend == "ollama":
+        return JSONResponse(
+            {"error": {"message": "Ollama đã tắt. Dùng Codex."}},
+            status_code=503,
+        )
+    if not codex_llm.logged_in():
+        return JSONResponse(
+            {"error": {"message": "Codex chưa đăng nhập. Ollama không còn dùng."}},
+            status_code=401,
+        )
+    try:
+        req_model = payload.get("model")
+        if req_model in (None, "", "zeroweight", rec.get("ollama_model"), LLM_MODEL):
+            req_model = rec.get("codex_model") or "gpt-6-luna"
+        data = await codex_llm.chat_completions({**payload, "model": req_model})
+        msg, content = message_content(data)
+        if msg.get("tool_calls") or content:
+            return JSONResponse(data)
+        return JSONResponse({"error": {"message": "Codex returned an empty reply."}}, status_code=502)
+    except Exception as e:
+        log.warning("codex backend_chat failed: %s", e)
+        return JSONResponse({"error": {"message": str(e)}}, status_code=502)
 
 
 def message_content(data: dict) -> tuple[dict, str]:
@@ -1465,8 +1465,12 @@ async def speech_socket(ws: WebSocket, kind: str):
                     if isinstance(item, Exception):
                         vn_ok = False
                         log.warning("tts ws vieneu failed: %s", item)
-                        vieneu_tts.reset_engine()
-                        await ws.send_text(json.dumps({"type": "error", "message": str(item)}))
+                        if vieneu_tts.is_cuda_error(item) or vieneu_tts.cuda_is_dead():
+                            msg = vieneu_tts.fail_cuda(item)
+                        else:
+                            vieneu_tts.reset_engine()
+                            msg = str(item)
+                        await ws.send_text(json.dumps({"type": "error", "message": msg}))
                         break
                     await ws.send_bytes(item)
                 if vn_ok:
@@ -1762,7 +1766,7 @@ def healthz():
         "ollama_model": rec.get("ollama_model"),
         "codex": rec.get("codex_model") if rec.get("llm_backend") == "codex" else None,
         "codex_logged_in": codex_llm.logged_in(),
-        "jev": "codex>ollama>regex" if rec.get("llm_backend") != "ollama" else "ollama>regex",
+        "jev": "codex>regex",
         "vision_model": rec.get("vision_model") or "ocr",
         "tts_gateway": rec.get("tts_gateway") or "local",
         "original_voices": bool(zw_developer_key()),

@@ -4,13 +4,10 @@
 #
 # Usage:
 #   .\scripts\setup-docker.ps1
-#   .\scripts\setup-docker.ps1 -BundledOllama     # Ollama inside Compose (new PC)
 #   .\scripts\setup-docker.ps1 -SkipBuild         # reuse image
 
 param(
-    [switch]$BundledOllama,
-    [switch]$SkipBuild,
-    [switch]$SkipOllamaPull
+    [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,15 +32,6 @@ function Wait-DockerEngine([int]$timeoutSec = 180) {
         Start-Sleep -Seconds 4
     }
     return $false
-}
-
-function Test-HostOllama {
-    try {
-        $r = Invoke-WebRequest -Uri "http://127.0.0.1:11434/api/tags" -TimeoutSec 3 -UseBasicParsing
-        return ($r.StatusCode -eq 200)
-    } catch {
-        return $false
-    }
 }
 
 Write-Step "Docker Desktop"
@@ -81,20 +69,7 @@ if (-not (Test-Path $envPath)) {
     Copy-Item $example $envPath
 }
 
-$hostOllama = Test-HostOllama
-$useBundled = $BundledOllama -or (-not $hostOllama)
-$envLines = Get-Content $envPath
-$envLines = $envLines | Where-Object { $_ -notmatch '^\s*LLM_BASE_URL=' -and $_ -notmatch '^\s*COMPOSE_PROFILES=' }
-if ($useBundled) {
-    $envLines += "LLM_BASE_URL=http://ollama:11434/v1"
-    $envLines += "COMPOSE_PROFILES=bundled-ollama"
-    Write-Host "LLM: bundled Ollama container"
-} else {
-    $envLines += "LLM_BASE_URL=http://host.docker.internal:11434/v1"
-    Write-Host "LLM: host Ollama at 127.0.0.1:11434"
-}
-$utf8 = New-Object System.Text.UTF8Encoding $false
-[System.IO.File]::WriteAllLines($envPath, @($envLines), $utf8)
+Write-Host "LLM: Codex only (Ollama off)"
 
 $codexDir = Join-Path $env:USERPROFILE ".codex"
 New-Item -ItemType Directory -Force -Path $codexDir | Out-Null
@@ -128,17 +103,6 @@ if (-not $SkipBuild) {
 Write-Step "docker compose up -d"
 docker compose up -d --remove-orphans
 if ($LASTEXITCODE -ne 0) { throw "docker compose up failed" }
-
-if ($useBundled -and -not $SkipOllamaPull) {
-    Write-Step "ollama pull llama3.2 (inside waifu-ollama)"
-    $pullDeadline = (Get-Date).AddMinutes(2)
-    while ((Get-Date) -lt $pullDeadline) {
-        docker exec waifu-ollama ollama list 2>$null | Out-Null
-        if ($LASTEXITCODE -eq 0) { break }
-        Start-Sleep -Seconds 3
-    }
-    docker exec waifu-ollama ollama pull llama3.2
-}
 
 Write-Step "Autostart at Windows logon"
 $taskName = "WaifuAgent-Docker"
