@@ -10988,6 +10988,22 @@ var UserRound = createLucideIcon("user-round", [["circle", {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var Pin = createLucideIcon("pin", [
+	["path", {
+		d: "M12 17v5",
+		key: "1ck2vn"
+	}],
+	["path", {
+		d: "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 7 17h10a2 2 0 0 0 1.11-3.55l-1.78-.9A2 2 0 0 1 15 10.76V6a3 3 0 0 0-6 0z",
+		key: "1mod7a"
+	}]
+]);
+/**
+* @license lucide-react v1.40.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var Volume2 = createLucideIcon("volume-2", [
 	["path", {
 		d: "M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z",
@@ -24904,8 +24920,10 @@ var TTS_REQUEST_RATE = 24e3;
 /** How often her speaking/listening state is re-sent to the page, to repair lost messages */
 var AVATAR_STATE_HEARTBEAT_MS = 1e3;
 var PREFS_KEY = "characterPrefs";
+var OVERLAY_CACHE_KEY = "avatarOverlayCache";
 var DEFAULT_PREFS = {
 	avatarVisible: true,
+	avatarAlwaysOn: false,
 	voiceMuted: false
 };
 function useCharacter(settings, onVoiceMessage) {
@@ -25122,6 +25140,12 @@ function useCharacter(settings, onVoiceMessage) {
 			if (tabId != null) zwSendAvatar(tabId, {
 				action: "hide"
 			});
+			if (windowId == null) return;
+			chrome.tabs.query({ windowId }).then((tabs) => {
+				for (const t of tabs) {
+					if (t.id != null && t.id !== tabId && canHost(t)) zwSendAvatar(t.id, { action: "hide" });
+				}
+			}).catch(() => {});
 		};
 		const canHost = (tab) => /^https?:/i.test(tab?.url || "") && !/chromewebstore\.google\.com|chrome\.google\.com\/webstore/.test(tab.url || "");
 		const showOn = async (tabId, opts = {}) => {
@@ -25135,9 +25159,13 @@ function useCharacter(settings, onVoiceMessage) {
 				if (disposed) return;
 				shownTabRef.current = tabId;
 			}
+			const payload = bundleRef.current?.payload;
+			if (payload) chrome.storage.local.set({
+				[OVERLAY_CACHE_KEY]: { payload, at: Date.now() }
+			});
 			const response = await zwSendAvatar(tabId, {
 				action: "show",
-				payload: bundleRef.current?.payload
+				payload
 			});
 			if (disposed) return;
 			if (response && response.tabId != null) shownTabRef.current = response.tabId;
@@ -25198,13 +25226,17 @@ function useCharacter(settings, onVoiceMessage) {
 			clearInterval(heartbeat);
 			chrome.tabs.onActivated.removeListener(onActivated);
 			chrome.tabs.onUpdated.removeListener(onUpdated);
-			hideShown();
+			keepAliveRef.current?.disconnect();
+			keepAliveRef.current = null;
+			if (!prefs.avatarVisible || !prefs.avatarAlwaysOn) hideShown();
 			setPageIssue(null);
 		};
 	}, [
 		showAvatar,
 		refreshBundle,
-		sendAvatarState
+		sendAvatarState,
+		prefs.avatarAlwaysOn,
+		prefs.avatarVisible
 	]);
 	/** For the agent's `move_avatar` tool */
 	const moveAvatar = (0, import_react.useCallback)(async (position) => {
@@ -25493,6 +25525,8 @@ function useCharacter(settings, onVoiceMessage) {
 		layer,
 		avatarVisible: prefs.avatarVisible,
 		setAvatarVisible: (avatarVisible) => updatePrefs({ avatarVisible }),
+		avatarAlwaysOn: !!prefs.avatarAlwaysOn,
+		setAvatarAlwaysOn: (avatarAlwaysOn) => updatePrefs({ avatarAlwaysOn }),
 		voiceMuted: prefs.voiceMuted,
 		setVoiceMuted: (voiceMuted) => {
 			if (voiceMuted) playbackRef.current?.stop();
@@ -63944,6 +63978,15 @@ function App() {
 							visible: character.avatarVisible,
 							issue: character.avatarIssue,
 							onToggle: () => character.setAvatarVisible(!character.avatarVisible)
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							variant: "ghost",
+							size: "icon-sm",
+							onClick: () => character.setAvatarAlwaysOn(!character.avatarAlwaysOn),
+							className: "cursor-pointer",
+							"aria-label": character.avatarAlwaysOn ? "Avatar luôn hiện trên web" : "Avatar chỉ hiện khi mở chat",
+							title: character.avatarAlwaysOn ? "Luôn hiện trên web — bấm để về như cũ (chỉ khi mở chat)" : "Như cũ: chỉ hiện khi mở chat — bấm để luôn hiện trên web",
+							"aria-pressed": character.avatarAlwaysOn,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pin, { className: character.avatarAlwaysOn ? "size-3.5 text-brand" : "size-3.5" })
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 							variant: "ghost",
 							size: "icon-sm",

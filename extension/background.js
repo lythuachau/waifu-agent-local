@@ -232,6 +232,15 @@ var background = (function() {
 					sendResponse({ ok: false, text: "", error: error instanceof Error ? error.message : String(error) });
 				});
 				return true;
+			} else if (message.type === "ZW_OPEN_CHAT") {
+				const tabId = sender.tab?.id;
+				const windowId = sender.tab?.windowId;
+				const done = () => sendResponse({ ok: true });
+				const openTab = () => chrome.tabs.create({ url: chrome.runtime.getURL("sidepanel.html") }).then(done).catch(() => sendResponse({ ok: false }));
+				const tryWindow = () => windowId != null ? chrome.sidePanel.open({ windowId }).then(done).catch(openTab) : openTab();
+				if (tabId != null) chrome.sidePanel.open({ tabId }).then(done).catch(tryWindow);
+				else tryWindow();
+				return true;
 			} else if (message.type === "AVATAR_EVENT") {
 				return;
 			} else {
@@ -255,6 +264,31 @@ var background = (function() {
 		};
 		chrome.runtime.onInstalled.addListener(zwInjectAll);
 		zwInjectAll();
+		const zwCanHost = (url) => /^https?:/i.test(url || "") && !zwRestricted(url);
+		const zwShowAlways = async (tabId) => {
+			const rec = await chrome.storage.local.get(["characterPrefs", "avatarOverlayCache"]);
+			const prefs = rec.characterPrefs || {};
+			if (!prefs.avatarVisible || !prefs.avatarAlwaysOn) return;
+			const payload = rec.avatarOverlayCache && rec.avatarOverlayCache.payload;
+			if (!payload || tabId == null) return;
+			const msg = { type: "AVATAR", action: "show", payload };
+			try {
+				await chrome.tabs.sendMessage(tabId, msg);
+			} catch {
+				try {
+					await chrome.scripting.executeScript({ target: { tabId }, files: ["content-scripts/content.js"] });
+					await chrome.tabs.sendMessage(tabId, msg);
+				} catch {}
+			}
+		};
+		chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+			if (change.status === "complete" && zwCanHost(tab.url)) zwShowAlways(tabId);
+		});
+		chrome.tabs.onActivated.addListener((info) => {
+			chrome.tabs.get(info.tabId).then((tab) => {
+				if (zwCanHost(tab.url)) zwShowAlways(tab.id);
+			}).catch(() => {});
+		});
 	});
 	globalThis.browser?.runtime?.id ? globalThis.browser : globalThis.chrome;
 	//#endregion

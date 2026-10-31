@@ -3689,6 +3689,16 @@ async function mountAvatar(container, payload, callbacks, signal) {
 .close::after { transform: rotate(-45deg); }
 .shell:hover .resize, .shell:hover .close { opacity: .9; }
 .close:hover { opacity: 1 !important; }
+.chat-tab {
+	position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%);
+	height: 20px; padding: 0 12px; border-radius: 0 0 9px 9px;
+	background: rgba(24,16,28,.88); color: #f3d2c0;
+	font: 600 11px/20px system-ui, sans-serif; letter-spacing: .04em;
+	cursor: pointer; pointer-events: auto; user-select: none;
+	box-shadow: 0 6px 14px rgba(0,0,0,.28);
+	border: 1px solid rgba(232,168,115,.35); border-top: 0;
+}
+.chat-tab:hover { background: rgba(40,24,36,.95); color: #fff; }
 .poke-hit {
 	position: absolute; width: 0; height: 0; pointer-events: none; z-index: 1;
 }
@@ -3876,8 +3886,12 @@ async function mountAvatar(container, payload, callbacks, signal) {
 		close.title = "Hide avatar";
 		close.setAttribute("role", "button");
 		close.setAttribute("aria-label", "Hide avatar");
+		const chatTab = div("chat-tab");
+		chatTab.textContent = "Chat";
+		chatTab.title = "Mở chat với avatar";
+		chatTab.setAttribute("role", "button");
 		stage.append(loader, resize, close);
-		shell.append(stage);
+		shell.append(stage, chatTab);
 		root.append(style, shell);
 		document.documentElement.appendChild(host);
 		let current = { ...layout };
@@ -3897,7 +3911,7 @@ async function mountAvatar(container, payload, callbacks, signal) {
 			current = {
 				...current,
 				right: clamp(current.right, 0, Math.max(0, innerWidth - width)),
-				bottom: clamp(current.bottom, 0, Math.max(0, innerHeight - height))
+				bottom: clamp(current.bottom, 22, Math.max(22, innerHeight - height - 22))
 			};
 			Object.assign(shell.style, {
 				height: `${height}px`,
@@ -3990,6 +4004,12 @@ async function mountAvatar(container, payload, callbacks, signal) {
 		close.addEventListener("click", (e) => {
 			e.stopPropagation();
 			onClose();
+		});
+		chatTab.addEventListener("pointerdown", (e) => e.stopPropagation());
+		chatTab.addEventListener("click", (e) => {
+			e.stopPropagation();
+			if (!isExtensionContextValid()) return;
+			chrome.runtime.sendMessage({ type: "ZW_OPEN_CHAT" }).catch(() => {});
 		});
 		let avatar = null;
 		let removed = false;
@@ -4203,7 +4223,12 @@ async function mountAvatar(container, payload, callbacks, signal) {
 	function initAvatarOverlay() {
 		chrome.runtime.onConnect.addListener((port) => {
 			if (port.name !== "avatar-keepalive") return;
-			port.onDisconnect.addListener(hide);
+			port.onDisconnect.addListener(() => {
+				chrome.storage.local.get("characterPrefs", (r) => {
+					const always = !!(r.characterPrefs && r.characterPrefs.avatarAlwaysOn);
+					if (!always) hide();
+				});
+			});
 		});
 		chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 			if (message?.type !== "AVATAR") return;
