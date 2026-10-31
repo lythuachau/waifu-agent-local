@@ -119,24 +119,22 @@
 		if (host) host.style.display = "none";
 	}
 
-	const OPEN_WEB = "Mở một trang web thường (http/https), rồi F5.";
-
 	g.zwSendAvatar = async function zwSendAvatar(tabId, message) {
 		if (message && message.action === "show") showPanelPreview(message.payload);
 		if (message && message.action === "hide") hidePanelPreview();
-		if (tabId == null) return { ok: false, panel: true, onPage: false, error: OPEN_WEB };
+		if (tabId == null) return { ok: true, panel: true };
 
 		let tab;
 		try {
 			tab = await chrome.tabs.get(tabId);
 		} catch {
-			return { ok: false, panel: true, onPage: false, error: "That tab is gone." };
+			return { ok: true, panel: true, error: "That tab is gone." };
 		}
 
 		const url = tab.url || "";
 		const pending = tab.pendingUrl || "";
 		if (restricted(url) || restricted(pending)) {
-			return { ok: false, panel: true, onPage: false, error: OPEN_WEB };
+			return { ok: true, panel: true };
 		}
 
 		const payload = { type: "AVATAR", ...message };
@@ -148,10 +146,9 @@
 				return await chrome.tabs.sendMessage(tabId, payload);
 			} catch (error) {
 				return {
-					ok: false,
+					ok: true,
 					panel: true,
-					onPage: false,
-					error: error instanceof Error ? error.message : OPEN_WEB
+					error: error instanceof Error ? error.message : "Reload the website tab once, then try again."
 				};
 			}
 		}

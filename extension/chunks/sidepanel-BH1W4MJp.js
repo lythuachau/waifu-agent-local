@@ -25000,7 +25000,6 @@ function useCharacter(settings, onVoiceMessage) {
 	}, [zwApiKey, settings?.language]);
 	const shownTabRef = (0, import_react.useRef)(null);
 	const keepAliveRef = (0, import_react.useRef)(null);
-	const showOnRef = (0, import_react.useRef)(null);
 	const sendToAvatar = (0, import_react.useCallback)(async (message) => {
 		const tabId = shownTabRef.current;
 		if (tabId == null) return null;
@@ -25095,12 +25094,6 @@ function useCharacter(settings, onVoiceMessage) {
 				updatePrefs({ avatarVisible: false });
 				return;
 			}
-			if (message.event === "dropped") {
-				keepAliveRef.current = null;
-				const id = sender.tab?.id;
-				if (id != null) void showOnRef.current?.(id);
-				return;
-			}
 			if (message.event === "failed") {
 				setPageIssue(message.message ?? "The avatar stopped rendering on this page.");
 				return;
@@ -25152,10 +25145,9 @@ function useCharacter(settings, onVoiceMessage) {
 			sendAvatarState();
 			try {
 				const liveId = shownTabRef.current;
-				if (response?.onPage && !keepAliveRef.current && liveId != null) keepAliveRef.current = chrome.tabs.connect(liveId, { name: "avatar-keepalive" });
+				if (!keepAliveRef.current && liveId != null) keepAliveRef.current = chrome.tabs.connect(liveId, { name: "avatar-keepalive" });
 			} catch {}
 		};
-		showOnRef.current = showOn;
 		const showActive = async () => {
 			windowId ??= (await chrome.windows.getCurrent()).id;
 			const [tab] = await chrome.tabs.query({
@@ -25169,7 +25161,6 @@ function useCharacter(settings, onVoiceMessage) {
 		};
 		const onUpdated = (tabId, change, tab) => {
 			if (change.status === "complete" && tab.active && tab.windowId === windowId) {
-				keepAliveRef.current?.disconnect();
 				keepAliveRef.current = null;
 				shownTabRef.current = null;
 				showOn(tabId);
@@ -25178,34 +25169,12 @@ function useCharacter(settings, onVoiceMessage) {
 		chrome.tabs.onActivated.addListener(onActivated);
 		chrome.tabs.onUpdated.addListener(onUpdated);
 		showActive();
-		let lastKick = 0;
 		const heartbeat = setInterval(() => {
+			sendAvatarState();
 			playbackRef.current?.unlock();
-			const tabId = shownTabRef.current;
-			if (tabId == null) return;
-			void (async () => {
-				const r = await zwSendAvatar(tabId, {
-					action: "state",
-					state: avatarStateRef.current
-				});
-				if (disposed) return;
-				if (r?.onPage) {
-					setPageIssue(null);
-					try {
-						if (!keepAliveRef.current) keepAliveRef.current = chrome.tabs.connect(tabId, { name: "avatar-keepalive" });
-					} catch {}
-					return;
-				}
-				setPageIssue(describeShowFailure(r));
-				if (Date.now() - lastKick < 3e3) return;
-				lastKick = Date.now();
-				shownTabRef.current = null;
-				await showOn(tabId);
-			})();
 		}, AVATAR_STATE_HEARTBEAT_MS);
 		return () => {
 			disposed = true;
-			showOnRef.current = null;
 			clearInterval(heartbeat);
 			chrome.tabs.onActivated.removeListener(onActivated);
 			chrome.tabs.onUpdated.removeListener(onUpdated);
@@ -25533,11 +25502,9 @@ function useCharacter(settings, onVoiceMessage) {
 }
 /** The reason a `show` did not put her on the page, or null if it did */
 function describeShowFailure(response) {
-	if (response?.onPage) return null;
-	if (response?.error) return response.error;
-	if (response?.panel || !response) return "Mở một trang web thường (http/https), rồi F5.";
-	if (response.ok) return null;
-	return "Avatar chưa gắn được trên trang này. F5 rồi thử lại.";
+	if (!response) return "She is in the side panel. Open a normal website, or wait for the local stage tab.";
+	if (response.ok || response.panel) return null;
+	return response.error || "The avatar could not be shown on this page.";
 }
 //#endregion
 //#region src/components/CompanionPicker.tsx

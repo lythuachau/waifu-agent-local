@@ -4137,16 +4137,10 @@ async function mountAvatar(container, payload, callbacks, signal) {
 		if (!isExtensionContextValid()) return;
 		chrome.runtime.sendMessage(event).catch(() => {});
 	}
-	function overlayOnPage() {
-		return !!(overlay && document.querySelector("[data-waifu-agent-avatar]"));
-	}
 	async function show(payload, replace = false) {
 		if (replace) hide();
-		if (mounting) {
-			try { await mounting; } catch {}
-		}
-		if (overlayOnPage()) return;
-		overlay = null;
+		if (mounting && mountController?.signal.aborted) await mounting.catch(() => {});
+		if (overlay || mounting) return;
 		const mine = ++generation;
 		const controller = new AbortController();
 		mountController = controller;
@@ -4209,38 +4203,25 @@ async function mountAvatar(container, payload, callbacks, signal) {
 	function initAvatarOverlay() {
 		chrome.runtime.onConnect.addListener((port) => {
 			if (port.name !== "avatar-keepalive") return;
-			port.onDisconnect.addListener(() => {
-				notifyPanel({
-					type: "AVATAR_EVENT",
-					event: "dropped"
-				});
-			});
+			port.onDisconnect.addListener(hide);
 		});
 		chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 			if (message?.type !== "AVATAR") return;
 			switch (message.action) {
 				case "show":
-					show(message.payload, message.replace).then(() => {
-						const onPage = overlayOnPage();
-						sendResponse(onPage ? { ok: true, onPage: true } : {
-							ok: false,
-							onPage: false,
-							error: "Avatar chưa gắn được trên trang này. F5 rồi thử lại."
-						});
-					}, (error) => sendResponse({
+					show(message.payload, message.replace).then(() => sendResponse({ ok: true }), (error) => sendResponse({
 						ok: false,
-						onPage: false,
 						error: error instanceof Error ? error.message : String(error)
 					}));
 					return true;
 				case "hide":
 					hide();
-					sendResponse({ ok: true, onPage: false });
+					sendResponse({ ok: true });
 					return;
 				case "state":
 					desiredState = message.state;
 					overlay?.setState(message.state);
-					sendResponse({ ok: overlayOnPage(), onPage: overlayOnPage() });
+					sendResponse({ ok: !!overlay });
 					return;
 				case "gesture":
 					if (!overlay) {
