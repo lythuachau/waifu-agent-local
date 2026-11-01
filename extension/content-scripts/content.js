@@ -3144,6 +3144,52 @@ gl_Position = vec4(aPosition, 0.0, 1.0);
 		* The optional `signal` is exposed to the script scope so cooperative code
 		* can abort promptly when the task is stopped.
 		*/
+		async setFormValue(index, value) {
+			try {
+				this.assertIndexed();
+				const element = getElementByIndex(this.selectorMap, index);
+				const elemText = this.elementTextMap.get(index);
+				const tag = element.tagName.toLowerCase();
+				const type = String(element.type || "").toLowerCase();
+				const raw = String(value ?? "");
+				if (tag === "select") {
+					await selectOptionElement(element, raw);
+					return {
+						success: true,
+						message: `✅ Selected "${raw}" on (${elemText ?? index}).`
+					};
+				}
+				if (type === "checkbox" || type === "radio") {
+					const on = /^(true|1|on|yes)$/i.test(raw) || raw === element.value;
+					if (!!element.checked !== on) element.click();
+					element.dispatchEvent(new Event("input", { bubbles: true }));
+					element.dispatchEvent(new Event("change", { bubbles: true }));
+					return {
+						success: true,
+						message: `✅ Set ${type} (${elemText ?? index}) to ${on}.`
+					};
+				}
+				if (type === "range" || type === "number") {
+					element.value = raw;
+					element.dispatchEvent(new Event("input", { bubbles: true }));
+					element.dispatchEvent(new Event("change", { bubbles: true }));
+					return {
+						success: true,
+						message: `✅ Set ${type} (${elemText ?? index}) to ${raw}.`
+					};
+				}
+				await inputTextElement(element, raw);
+				return {
+					success: true,
+					message: `✅ Set value (${raw}) on (${elemText ?? index}).`
+				};
+			} catch (error) {
+				return {
+					success: false,
+					message: `❌ Failed to set form value: ${error}`
+				};
+			}
+		}
 		async executeJavascript(script, signal) {
 			try {
 				const asyncFunction = eval(`(async (signal) => { ${script} })`);
@@ -4529,6 +4575,7 @@ async function mountAvatar(container, payload, callbacks, signal) {
 				case "scroll":
 				case "scroll_horizontally":
 				case "execute_javascript":
+				case "set_form_value":
 				case "get_page_info":
 					pc[methodName](...payload || []).then((result) => {
 						const note = action === "get_browser_state" ? avatarNote() : "";
@@ -4563,6 +4610,7 @@ async function mountAvatar(container, payload, callbacks, signal) {
 			case "scroll": return "scroll";
 			case "scroll_horizontally": return "scrollHorizontally";
 			case "execute_javascript": return "executeJavascript";
+			case "set_form_value": return "setFormValue";
 			case "get_page_info": return "getPageInfoSnapshot";
 			default: return action;
 		}

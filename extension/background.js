@@ -19,11 +19,18 @@ var background = (function() {
 			sendResponse({ tabId: sender.tab?.id || null });
 			return;
 		}
-		chrome.tabs.sendMessage(targetTabId, {
+		const PAGE_TIMEOUT_MS = 15e3;
+		const send = chrome.tabs.sendMessage(targetTabId, {
 			type: "PAGE_CONTROL",
 			action,
 			payload
-		}).then((result) => {
+		});
+		const timeout = new Promise((resolve) => setTimeout(() => resolve({
+			success: false,
+			error: "action_timeout",
+			message: "❌ action_timeout"
+		}), PAGE_TIMEOUT_MS));
+		Promise.race([send, timeout]).then((result) => {
 			sendResponse(result);
 		}).catch((error) => {
 			console.error(PREFIX, error);
@@ -153,6 +160,16 @@ var background = (function() {
 				chrome.tabs.remove(payload.tabId).then(() => {
 					sendResponse({ success: true });
 				}).catch((error) => {
+					sendResponse({ error: error instanceof Error ? error.message : String(error) });
+				});
+				return true;
+			case "go_back":
+				chrome.tabs.goBack(payload.tabId).then(() => sendResponse({ success: true })).catch((error) => {
+					sendResponse({ error: error instanceof Error ? error.message : String(error) });
+				});
+				return true;
+			case "go_forward":
+				chrome.tabs.goForward(payload.tabId).then(() => sendResponse({ success: true })).catch((error) => {
 					sendResponse({ error: error instanceof Error ? error.message : String(error) });
 				});
 				return true;

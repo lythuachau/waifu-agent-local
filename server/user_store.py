@@ -146,6 +146,8 @@ def save_prefs(body: dict) -> dict:
             cur["characterPrefs"] = {**base, **body["characterPrefs"]}
         if "language" in body:
             cur["language"] = body["language"]
+        if isinstance(body.get("blockedDomains"), list):
+            cur["blockedDomains"] = [str(x).strip() for x in body["blockedDomains"] if str(x).strip()][:80]
     USER.mkdir(parents=True, exist_ok=True)
     with _lock("prefs"):
         PREFS_PATH.write_text(json.dumps(cur, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -22403,10 +22403,22 @@ function resolveCompanionLLMConfig({ zwApiKey, llm }) {
 	return ownLLMConfig(llm);
 }
 function ownLLMConfig(llm) {
+	const provider = llm && llm.provider && llm.provider in LLM_PROVIDERS ? llm.provider : "codex";
+	const spec = LLM_PROVIDERS[provider] || LLM_PROVIDERS.codex;
 	return {
-		baseURL: LLM_PROVIDERS[llm.provider].baseURL,
-		model: llm.model,
-		apiKey: providerApiKey(llm)
+		baseURL: spec.baseURL,
+		model: String(llm && llm.model || spec.defaultModel || "gpt-6-luna").trim(),
+		apiKey: providerApiKey({
+			provider,
+			apiKey: llm && llm.apiKey
+		}) || LOCAL_API_KEY,
+		transformRequestBody: (body) => {
+			const effort = String(llm && llm.reasoningEffort || "").trim().toLowerCase();
+			const verbosity = String(llm && llm.verbosity || "").trim().toLowerCase();
+			if (effort && effort !== "auto") body.reasoning_effort = effort;
+			if (verbosity && verbosity !== "auto") body.verbosity = verbosity;
+			return body;
+		}
 	};
 }
 /** The Jev config for the agent's `act` tool and message routing. Always the local stub. */
@@ -23619,8 +23631,12 @@ function collapseWs(s) {
 	return String(s || "").replace(/\s+/g, " ").trim();
 }
 function chapterNumFromUrl(url) {
-	const m = String(url || "").match(/\/chapters\/(\d+)/i);
+	const m = String(url || "").match(/\/chapters\/(\d+(?:\.\d+)?)(?=\/|$|\?|#)/i);
 	return m ? Number(m[1]) : null;
+}
+function nextChapterNum(num) {
+	if (num == null || Number.isNaN(num)) return null;
+	return Number.isInteger(num) ? num + 1 : Math.ceil(num);
 }
 function parseLocateJson(text) {
 	const raw = String(text || "").trim();
@@ -23629,9 +23645,9 @@ function parseLocateJson(text) {
 	const tryParse = (s) => {
 		try {
 			const v = JSON.parse(s);
-			if (v && typeof v.title === "string" && typeof v.start === "string" && typeof v.end === "string") {
+			if (v && typeof v.start === "string" && typeof v.end === "string") {
 				return {
-					title: collapseWs(v.title),
+					title: collapseWs(typeof v.title === "string" ? v.title : ""),
 					start: collapseWs(v.start),
 					end: collapseWs(v.end)
 				};
@@ -23648,7 +23664,7 @@ function parseLocateJson(text) {
 }
 function indexOfNeedle(hay, needle, from) {
 	const n = collapseWs(needle);
-	if (n.length < 12) return -1;
+	if (n.length < 8) return -1;
 	const i = hay.indexOf(n, from || 0);
 	if (i >= 0) return i;
 	if (n.length > 40) return hay.indexOf(n.slice(0, 40), from || 0);
@@ -23656,7 +23672,7 @@ function indexOfNeedle(hay, needle, from) {
 }
 function proseLenAfter(hay, index, skip) {
 	let s = hay.slice(index + skip).trim();
-	s = s.replace(/^(?:Chương\s*\d+\s*[:.]?\s*)+/i, "");
+	s = s.replace(/^(?:Chương\s*\d+(?:\.\d+)?\s*[:.]?\s*)+/i, "");
 	return s.length;
 }
 function pickTitleIndex(hay, title) {
@@ -23675,7 +23691,7 @@ function pickTitleIndex(hay, title) {
 	};
 	let hits = collect(n);
 	if (!hits.length) {
-		const m = n.match(/^Chương\s*\d+\s*[:.]?/);
+		const m = n.match(/^Chương\s*\d+(?:\.\d+)?\s*[:.]?/);
 		if (m && m[0].length >= 4) {
 			n = m[0];
 			hits = collect(n);
@@ -23693,15 +23709,9 @@ function pickTitleIndex(hay, title) {
 	}
 	return best;
 }
-function sliceChapterDump(dump, loc) {
-	const hay = collapseWs(dump);
-	if (!hay || !loc) return "";
-	const titleIdx = pickTitleIndex(hay, loc.title);
-	if (titleIdx < 0) return "";
-	const startIdx = indexOfNeedle(hay, loc.start, titleIdx);
+function sliceFromStartEnd(hay, startIdx, endNeedle) {
 	if (startIdx < 0) return "";
-	const endNeedle = collapseWs(loc.end);
-	if (endNeedle.length < 12) return "";
+	if (endNeedle.length < 8) return "";
 	const endIdx = hay.indexOf(endNeedle, startIdx);
 	if (endIdx < 0) {
 		const shortEnd = endNeedle.length > 40 ? hay.indexOf(endNeedle.slice(0, 40), startIdx) : -1;
@@ -23712,12 +23722,24 @@ function sliceChapterDump(dump, loc) {
 	const sliced = hay.slice(startIdx, endIdx + endNeedle.length).trim();
 	return sliced.length >= 80 ? sliced : "";
 }
-var CHAPTER_LOCATE_SYSTEM = "You are a screen-reader locator. The user is reading text already visible on their own screen. Identify the CURRENT chapter in the dump.\nReturn ONLY a JSON object, no markdown:\n{\"title\":\"...\",\"start\":\"...\",\"end\":\"...\"}\nRules:\n- title: exact heading of THIS chapter copied from the dump (match the given chapter number). Not a tab, TOC row, date, calendar, or another chapter.\n- start: exact opening of THIS chapter's BODY after the title. Skip dates, chapter lists, comments, and unrelated lines under the title. Copy a unique 20-80 character span verbatim from the dump.\n- end: exact closing of THIS chapter's body. Copy a unique 20-80 character span verbatim. Not next-chapter UI.\n- Every value MUST be a verbatim substring of the dump.\n- Do not retell, summarize, or output the full chapter.";
+function sliceChapterDump(dump, loc) {
+	const hay = collapseWs(dump);
+	if (!hay || !loc) return "";
+	const endNeedle = collapseWs(loc.end);
+	const titleIdx = pickTitleIndex(hay, loc.title);
+	let startIdx = indexOfNeedle(hay, loc.start, titleIdx >= 0 ? titleIdx : 0);
+	if (startIdx < 0) startIdx = indexOfNeedle(hay, loc.start, 0);
+	if (startIdx < 0) return "";
+	return sliceFromStartEnd(hay, startIdx, endNeedle);
+}
+var CHAPTER_LOCATE_SYSTEM = "You are a screen-reader locator. The user is reading text already visible on their own screen. Identify the CURRENT chapter in the dump.\nReturn ONLY a JSON object, no markdown:\n{\"title\":\"...\",\"start\":\"...\",\"end\":\"...\"}\nRules:\n- title: exact heading of THIS chapter copied from the dump if a heading exists (match the given chapter number, including decimals like 0.5). Not a tab, TOC row, date, calendar, or another chapter. If the dump has no heading, copy the first 20-80 characters of THIS chapter body, or \"\".\n- start: exact opening of THIS chapter's BODY. Skip dates, chapter lists, comments. Copy a unique 24-80 character span verbatim from the dump.\n- end: exact closing of THIS chapter's body. Copy a unique 24-80 character span verbatim. Not next-chapter UI.\n- start and end are required. title may be empty if no heading is in the dump.\n- Every value MUST be a verbatim substring of the dump (empty title allowed).\n- Do not retell, summarize, or output the full chapter.";
 async function locateChapter(dump, url) {
 	const hay = collapseWs(dump);
 	if (hay.length < 80) throw new Error("Dump chương quá ngắn để não ghim mốc.");
 	const num = chapterNumFromUrl(url);
-	const hint = num != null ? `This page is chapter ${num}. title must be this chapter, not ${Math.max(0, num - 1)} or ${num + 1}.\n` : "";
+	const nxt = nextChapterNum(num);
+	const prev = num == null ? null : Number.isInteger(num) ? Math.max(0, num - 1) : Math.floor(num);
+	const hint = num != null ? `This page is chapter ${num}. title must be this chapter (${num}), not ${prev} or ${nxt}.\n` : "";
 	const response = await fetch(`${ZEROWEIGHT_API}/codex/chat/completions`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -23779,9 +23801,11 @@ async function locateChapterRetry(dump, url, shouldStop, attempts = 3) {
 function nextChapterUrl(url) {
 	try {
 		const u = new URL(url);
-		const m = u.pathname.match(/^(.*\/chapters\/)(\d+)\/?$/i);
+		const m = u.pathname.match(/^(.*\/chapters\/)(\d+(?:\.\d+)?)\/?$/i);
 		if (!m) return null;
-		return `${u.origin}${m[1]}${Number(m[2]) + 1}${u.search}`;
+		const nxt = nextChapterNum(Number(m[2]));
+		if (nxt == null) return null;
+		return `${u.origin}${m[1]}${nxt}${u.search}`;
 	} catch {
 		return null;
 	}
@@ -25683,7 +25707,8 @@ function useCharacter(settings, onVoiceMessage) {
 			const next = nextChapterUrl(tab.url);
 			if (!next) {
 				await playing;
-				fail("Không tìm thấy chương tiếp (URL cần dạng /chapters/N).");
+				if (shouldStop?.()) break;
+				fail("Không tìm thấy chương tiếp (URL cần dạng /chapters/N hoặc /chapters/N.5).");
 				break;
 			}
 			await Promise.race([playing, playback.waitUntilNearEnd()]);
@@ -63992,7 +64017,9 @@ function useAgent({ characterRef, moveAvatarRef }) {
 				llm = {
 					provider: storedLLM.provider,
 					model: storedLLM.model,
-					apiKey: providerNeedsKey(storedLLM.provider) ? apiKey : LOCAL_API_KEY
+					apiKey: providerNeedsKey(storedLLM.provider) ? apiKey : LOCAL_API_KEY,
+					reasoningEffort: storedLLM.reasoningEffort || "auto",
+					verbosity: storedLLM.verbosity || "auto"
 				};
 			} else if (storedLLM?.provider) {
 				chrome.storage.local.remove("llmProvider").catch(() => {});
@@ -64136,6 +64163,8 @@ function useAgent({ characterRef, moveAvatarRef }) {
 					characterEnabled: !!character,
 					llm: cfg && (cfg.llm || cfg.zwApiKey) ? resolveLLMConfig(cfg) : void 0
 				});
+				if (options.forceMode === "chat") route.mode = "chat";
+				if (options.forceMode === "agent") route.mode = "agent";
 				const avatarId = cfg?.avatarId;
 				const current = options.newChat || route.newChat || !belongsTo(previous, avatarId) ? newChat(avatarId) : {
 					...previous,
@@ -64249,7 +64278,9 @@ function useAgent({ characterRef, moveAvatarRef }) {
 			llm = llm && {
 				...llm,
 				apiKey: providerApiKey(llm) || LOCAL_API_KEY,
-				model: llm.model.trim()
+				model: String(llm.model || "gpt-6-luna").trim(),
+				reasoningEffort: llm.reasoningEffort || "auto",
+				verbosity: llm.verbosity || "auto"
 			};
 			jev = void 0;
 			await chrome.storage.local.set({ characterConfig: {
@@ -64259,6 +64290,8 @@ function useAgent({ characterRef, moveAvatarRef }) {
 			if (llm) await chrome.storage.local.set({ llmProvider: {
 				provider: llm.provider,
 				model: llm.model,
+				reasoningEffort: llm.reasoningEffort || "auto",
+				verbosity: llm.verbosity || "auto",
 				encryptedApiKey: await encryptSecret(llm.apiKey)
 			} });
 			else await chrome.storage.local.remove("llmProvider");
@@ -64312,6 +64345,44 @@ async function buildMentionContext(mentions) {
 	}
 	return parts.join("\n\n");
 }
+function prettyModelName(id) {
+	let s = String(id || "gpt-6-luna").replace(/^gpt-/i, "GPT-").replace(/-/g, " ").replace(/\b([a-z])/g, (_, c) => c.toUpperCase());
+	return s.replace(/^(GPT) (\d)/, "$1-$2");
+}
+var LLM_EFFORT_STEPS = [
+	{
+		key: "low",
+		label: "low",
+		reasoningEffort: "low",
+		verbosity: "low"
+	},
+	{
+		key: "medium",
+		label: "medium",
+		reasoningEffort: "medium",
+		verbosity: "medium"
+	},
+	{
+		key: "high",
+		label: "high",
+		reasoningEffort: "high",
+		verbosity: "high"
+	},
+	{
+		key: "xhigh",
+		label: "xhigh",
+		reasoningEffort: "xhigh",
+		verbosity: "high"
+	}
+];
+function llmEffortIndex(llm) {
+	const r = String(llm?.reasoningEffort || "auto").trim().toLowerCase();
+	if (r === "none" || r === "minimal" || r === "fast" || r === "low") return 0;
+	if (r === "medium" || r === "auto") return 1;
+	if (r === "high") return 2;
+	if (r === "xhigh" || r === "max" || r === "ultra") return 3;
+	return 1;
+}
 function App() {
 	const [view, setView] = (0, import_react.useState)({ name: "chat" });
 	const [inputValue, setInputValue] = (0, import_react.useState)("");
@@ -64333,10 +64404,19 @@ function App() {
 	const character = useCharacter(characterSettings, (text) => voiceMessageRef.current(text));
 	characterRef.current = character.layer;
 	const { speakingMessage, stopSpeaking } = character;
+	const [readingChapters, setReadingChapters] = (0, import_react.useState)(false);
+	const readingStopRef = (0, import_react.useRef)(false);
+	const stopSpeakingNow = (0, import_react.useCallback)(() => {
+		if (readingChapters) {
+			readingStopRef.current = true;
+			setReadingChapters(false);
+		}
+		stopSpeaking();
+	}, [readingChapters, stopSpeaking]);
 	const speaking = (0, import_react.useMemo)(() => ({
 		message: speakingMessage,
-		stop: stopSpeaking
-	}), [speakingMessage, stopSpeaking]);
+		stop: stopSpeakingNow
+	}), [speakingMessage, stopSpeakingNow]);
 	moveAvatarRef.current = character.moveAvatar;
 	const { voice } = character;
 	const voiceOn = voice.state !== "off";
@@ -64359,10 +64439,36 @@ function App() {
 	const isRunning = status === "running";
 	const canSend = !isRunning || !!pendingQuestion;
 	const { unlockAudio } = character;
-	const [readingChapters, setReadingChapters] = (0, import_react.useState)(false);
-	const readingStopRef = (0, import_react.useRef)(false);
 	const [tabMentions, setTabMentions] = (0, import_react.useState)([]);
 	const [tabPicker, setTabPicker] = (0, import_react.useState)(null);
+	const [assistantMode, setAssistantMode] = (0, import_react.useState)("ask");
+	const [modelMenuOpen, setModelMenuOpen] = (0, import_react.useState)(false);
+	const [modelMenuView, setModelMenuView] = (0, import_react.useState)("list");
+	const [effortLocal, setEffortLocal] = (0, import_react.useState)(null);
+	(0, import_react.useEffect)(() => {
+		if (!modelMenuOpen) return;
+		const close = (e) => {
+			if (e.target?.closest?.("[data-sidecar-model]")) return;
+			setModelMenuOpen(false);
+		};
+		const t = setTimeout(() => document.addEventListener("mousedown", close), 0);
+		return () => {
+			clearTimeout(t);
+			document.removeEventListener("mousedown", close);
+		};
+	}, [modelMenuOpen]);
+	const [composerModels, setComposerModels] = (0, import_react.useState)(["gpt-6-luna"]);
+	const reloadComposerModels = (0, import_react.useCallback)(() => {
+		return fetch(`${ZEROWEIGHT_API}/codex/models`).then((r) => r.ok ? r.json() : Promise.reject()).then((body) => {
+			const ids = (Array.isArray(body?.data) ? body.data : []).map((m) => m.id).filter(Boolean);
+			setComposerModels(ids.length ? ids : ["gpt-6-luna"]);
+		}).catch(() => {
+			setComposerModels((cur) => cur.length ? cur : ["gpt-6-luna"]);
+		});
+	}, []);
+	(0, import_react.useEffect)(() => {
+		reloadComposerModels();
+	}, [reloadComposerModels]);
 	const sendRef = (0, import_react.useRef)(() => {});
 	const sendMessage = (0, import_react.useCallback)((message, options) => {
 		const text = message.trim();
@@ -64381,12 +64487,13 @@ function App() {
 			}
 			await send(text, {
 				...options,
-				extraContext: extraContext || options?.extraContext
+				extraContext: extraContext || options?.extraContext,
+				forceMode: options?.forceMode ?? (assistantMode === "computer" ? "agent" : "chat")
 			});
 		})().catch((error) => {
 			console.error("[SidePanel] Failed to send message:", error);
 		});
-	}, [send, unlockAudio, tabMentions]);
+	}, [send, unlockAudio, tabMentions, assistantMode]);
 	sendRef.current = sendMessage;
 	voiceMessageRef.current = (text) => {
 		if (canSend) sendMessage(text);
@@ -64429,22 +64536,44 @@ function App() {
 		unlockAudio();
 		try {
 			const err = await character.readChapters(n, () => readingStopRef.current);
-			if (err) {
+			if (err && !readingStopRef.current) {
 				const spoken = logChapterError(`Đọc ${n} chương`, err);
 				character.speakError(spoken);
 			}
 		} catch (error) {
-			console.error("[SidePanel] readChapters", error);
-			const msg = error instanceof Error ? error.message : String(error);
-			const spoken = logChapterError(`Đọc ${n} chương`, msg);
-			character.speakError(spoken);
+			if (!readingStopRef.current) {
+				console.error("[SidePanel] readChapters", error);
+				const msg = error instanceof Error ? error.message : String(error);
+				const spoken = logChapterError(`Đọc ${n} chương`, msg);
+				character.speakError(spoken);
+			}
 		} finally {
 			setReadingChapters(false);
 		}
 	}, [readingChapters, character, unlockAudio, logChapterError]);
+	const applyLlm = (patch) => {
+		if (!config) return;
+		if (patch.reasoningEffort != null) setEffortLocal(patch.reasoningEffort);
+		configure({
+			language: config.language,
+			maxSteps: config.maxSteps,
+			systemInstruction: config.systemInstruction,
+			zwApiKey: config.zwApiKey,
+			avatarId: config.avatarId,
+			llm: {
+				provider: config.llm?.provider || "codex",
+				apiKey: config.llm?.apiKey || LOCAL_API_KEY,
+				model: config.llm?.model || "gpt-6-luna",
+				reasoningEffort: config.llm?.reasoningEffort || "auto",
+				verbosity: config.llm?.verbosity || "auto",
+				...patch
+			}
+		}).catch((err) => console.error("[SidePanel] set llm", err));
+	};
 	const handleKeyDown = (e) => {
 		if (e.key === "Escape") {
 			setTabPicker(null);
+			setModelMenuOpen(false);
 			return;
 		}
 		if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -64528,6 +64657,12 @@ function App() {
 		onRerun: rerunTask
 	});
 	const showEmptyState = chat.turns.length === 0 && !currentTask;
+	const listedModels = config?.llm?.model && !composerModels.includes(config.llm.model) ? [config.llm.model, ...composerModels] : composerModels;
+	const currentModel = config?.llm?.model || "gpt-6-luna";
+	const effortIdx = llmEffortIndex({
+		reasoningEffort: effortLocal ?? config?.llm?.reasoningEffort
+	});
+	const effortStep = LLM_EFFORT_STEPS[Math.max(0, effortIdx)] || LLM_EFFORT_STEPS[1];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "relative flex flex-col h-screen bg-background",
 		children: [
@@ -64635,7 +64770,7 @@ function App() {
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("footer", {
-				className: "border-t p-3",
+				className: "p-3",
 				children: [speakingMessage && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mb-2 flex items-center justify-between gap-2 rounded-md border border-brand/40 bg-brand/10 px-2.5 py-1.5",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -64646,7 +64781,7 @@ function App() {
 						onClick: (e) => {
 							e.preventDefault();
 							e.stopPropagation();
-							stopSpeaking();
+							stopSpeakingNow();
 						},
 						className: "shrink-0 rounded-md border border-brand/50 bg-card px-2 py-1 text-[11px] font-medium text-foreground cursor-pointer hover:bg-brand/20",
 						children: "Dừng nói"
@@ -64669,7 +64804,7 @@ function App() {
 					onClose: voice.stop,
 					onStop: handleStop
 				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "relative",
+					className: "relative sidecar-composer sidecar-enter",
 					children: [
 						tabMentions.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "mb-1.5 flex flex-wrap gap-1",
@@ -64690,74 +64825,171 @@ function App() {
 								children: tab.title || tab.url
 							}, "t" + tab.id))
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(InputGroup, {
-					className: "relative rounded-lg",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupTextarea, {
-						ref: textareaRef,
-						placeholder: pendingQuestion ? "Reply…" : chat.turns.length ? "Hỏi tiếp… gõ @ để gắn tab" : "Mô tả việc… gõ @ để gắn tab",
-						value: inputValue,
-						onChange: (e) => handleComposerChange(e.target.value),
-						onKeyDown: handleKeyDown,
-						disabled: !canSend,
-						className: cn("text-xs min-h-10", voice.available ? "pr-44" : pendingQuestion ? "pr-36" : "pr-28")
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(InputGroupAddon, {
-						align: "inline-end",
-						className: "absolute bottom-0 right-0",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupButton, {
-								size: "icon-sm",
-								variant: "ghost",
-								onClick: handleSummarize,
-								disabled: !canSend,
-								className: "size-7 cursor-pointer text-muted-foreground hover:text-brand-light",
-								"aria-label": "Tóm tắt trang",
-								title: "Tóm tắt trang (Alt+S)",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, { className: "size-3.5" })
-							}),
-							voice.available && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupButton, {
-								size: "icon-sm",
-								variant: "ghost",
-								onClick: () => {
-									unlockAudio();
-									voice.start();
-								},
-								className: "size-7 cursor-pointer text-muted-foreground hover:text-brand-light",
-								"aria-label": "Voice input",
-								title: "Voice input",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Mic, { className: "size-3.5" })
-							}),
-							isRunning && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupButton, {
-								size: "icon-sm",
-								variant: "destructive",
-								onClick: handleStop,
-								className: "size-7",
-								"aria-label": "Stop task",
-								title: "Stop task",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Square, { className: "size-3" })
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupButton, {
-								size: "icon-sm",
-								variant: readingChapters ? "destructive" : "ghost",
-								onClick: handleReadChapters,
-								disabled: isRunning && !readingChapters,
-								className: "size-7 cursor-pointer",
-								"aria-label": readingChapters ? "Dừng đọc chương" : "Đọc nhiều chương liên tục",
-								title: readingChapters ? "Dừng đọc chương" : "Đọc N chương: ~10s cuối tạo TTS chương sau, hết tiếng mới nói tiếp",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BookOpen, { className: "size-3.5" })
-							}),
-							canSend && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(InputGroupButton, {
-								size: "icon-sm",
-								variant: "default",
-								onClick: () => handleSubmit(),
-								disabled: !inputValue.trim(),
-								className: "size-7 cursor-pointer",
-								"aria-label": "Send",
-								title: "Send",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Send, { className: "size-3" })
-							})
-						]
-					})]
-				})]
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", {
+							ref: textareaRef,
+							className: "sidecar-input",
+							rows: 2,
+							placeholder: pendingQuestion ? "Reply…" : assistantMode === "computer" ? "Bảo làm gì trên trang…" : chat.turns.length ? "Hỏi tiếp… gõ @ để gắn tab" : "Hỏi gì cũng được… gõ @ để gắn tab",
+							value: inputValue,
+							onChange: (e) => handleComposerChange(e.target.value),
+							onKeyDown: handleKeyDown,
+							disabled: !canSend
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "sidecar-toolbar",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: cn("sidecar-chip", assistantMode === "ask" && "sidecar-chip-on"),
+									onClick: () => setAssistantMode("ask"),
+									children: "Hỏi"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: cn("sidecar-chip", assistantMode === "computer" && "sidecar-chip-on"),
+									onClick: () => setAssistantMode("computer"),
+									children: "Làm trên web"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "sidecar-toolbar-end",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "relative",
+											"data-sidecar-model": "",
+											children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+											type: "button",
+											className: "sidecar-model sidecar-model-btn",
+											title: "Model",
+											onClick: (e) => {
+												e.stopPropagation();
+												if (modelMenuOpen) setModelMenuOpen(false);
+												else {
+													setModelMenuView("list");
+													setModelMenuOpen(true);
+												}
+											},
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "sidecar-model-btn-label",
+												children: prettyModelName(currentModel)
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronRight, { className: "size-3 shrink-0" })]
+										}),
+										modelMenuOpen && (modelMenuView === "tune" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "sidecar-model-menu",
+											onMouseDown: (e) => e.stopPropagation(),
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+													className: "sidecar-tune-head",
+													children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+														className: "sidecar-tune-copy",
+														children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+															children: effortStep.label
+														}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+															type: "button",
+															onClick: () => setModelMenuView("list"),
+															children: [prettyModelName(currentModel), " ›"]
+														})]
+													})]
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+													type: "range",
+													min: 0,
+													max: 3,
+													step: 1,
+													className: "sidecar-effort",
+													value: Math.max(0, effortIdx),
+													style: { "--effort-pct": `${Math.max(0, effortIdx) / 3 * 100}%` },
+													onInput: (e) => {
+														const step = LLM_EFFORT_STEPS[Number(e.target.value)] || LLM_EFFORT_STEPS[1];
+														setEffortLocal(step.reasoningEffort);
+													},
+													onChange: (e) => {
+														const step = LLM_EFFORT_STEPS[Number(e.target.value)] || LLM_EFFORT_STEPS[1];
+														applyLlm({
+															reasoningEffort: step.reasoningEffort,
+															verbosity: step.verbosity
+														});
+													}
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+													className: "sidecar-effort-ticks",
+													children: LLM_EFFORT_STEPS.map((step, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+														type: "button",
+														className: cn("sidecar-effort-tick", effortIdx === i && "sidecar-effort-tick-on"),
+														onClick: () => applyLlm({
+															reasoningEffort: step.reasoningEffort,
+															verbosity: step.verbosity
+														}),
+														children: step.label
+													}, step.key))
+												})
+											]
+										}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "sidecar-model-menu",
+											onMouseDown: (e) => e.stopPropagation(),
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+													className: "sidecar-model-title",
+													children: "Select model"
+												}),
+												listedModels.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+													type: "button",
+													className: "sidecar-model-row",
+													onClick: () => {
+														applyLlm({ model: m });
+														setModelMenuView("tune");
+													},
+													children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+														children: prettyModelName(m)
+													}), currentModel === m ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Check, {
+														className: "size-3.5 sidecar-model-check"
+													}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {})]
+												}, m))
+											]
+										}))
+									]
+								}),
+										voice.available && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: "sidecar-icon",
+											onClick: () => {
+												unlockAudio();
+												voice.start();
+											},
+											"aria-label": "Voice input",
+											title: "Voice input",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Mic, { className: "size-3.5" })
+										}),
+										isRunning && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: "sidecar-icon sidecar-icon-stop",
+											onClick: handleStop,
+											"aria-label": "Stop task",
+											title: "Stop task",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Square, { className: "size-3" })
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: cn("sidecar-icon", readingChapters && "sidecar-icon-stop"),
+											onClick: handleReadChapters,
+											disabled: isRunning && !readingChapters,
+											"aria-label": readingChapters ? "Dừng đọc chương" : "Đọc nhiều chương liên tục",
+											title: readingChapters ? "Dừng đọc chương" : "Đọc N chương",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BookOpen, { className: "size-3.5" })
+										}),
+										canSend && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: "sidecar-send",
+											onClick: () => handleSubmit(),
+											disabled: !inputValue.trim(),
+											"aria-label": "Send",
+											title: "Send",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Send, { className: "size-3.5" })
+										})
+									]
+								})
+							]
+						})]
 			})]
 		})
 		]

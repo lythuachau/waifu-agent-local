@@ -250,7 +250,29 @@ def _flatten_content(content) -> list[dict]:
     return parts or [{"type": "input_text", "text": ""}]
 
 
-def to_payload(messages: list, model: str) -> dict:
+def _norm_effort(raw) -> str:
+    v = str(raw or "").strip().lower()
+    if v in ("fast",):
+        return "none"
+    if v in ("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"):
+        return v
+    return ""
+
+
+def _norm_verbosity(raw) -> str:
+    v = str(raw or "").strip().lower()
+    if v in ("low", "medium", "high"):
+        return v
+    if v in ("fast", "speed"):
+        return "low"
+    if v in ("balanced", "normal"):
+        return "medium"
+    if v in ("detailed", "slow"):
+        return "high"
+    return ""
+
+
+def to_payload(messages: list, model: str, reasoning_effort: str | None = None, verbosity: str | None = None) -> dict:
     instructions: list[str] = []
     items: list[dict] = []
     for m in messages or []:
@@ -268,7 +290,7 @@ def to_payload(messages: list, model: str) -> dict:
             })
             continue
         items.append({"role": "user", "content": parts})
-    return {
+    payload = {
         "model": model or DEFAULT_MODEL,
         "instructions": "\n\n".join(instructions)
         or "You are a live chat companion. Reply in the user's language. Short sentences.",
@@ -277,6 +299,13 @@ def to_payload(messages: list, model: str) -> dict:
         "stream": True,
         "tools": [],
     }
+    effort = _norm_effort(reasoning_effort)
+    if effort:
+        payload["reasoning"] = {"effort": "minimal" if effort in ("none", "fast") else effort}
+    verb = _norm_verbosity(verbosity)
+    if verb:
+        payload["text"] = {"verbosity": verb}
+    return payload
 
 
 def _delta_text(delta) -> str:
@@ -329,11 +358,11 @@ def _text_from_sse_line(line: str, buf: list[str]) -> str | None:
     return None
 
 
-async def complete(messages: list, model: str | None = None) -> str:
+async def complete(messages: list, model: str | None = None, reasoning_effort: str | None = None, verbosity: str | None = None) -> str:
     if not logged_in():
         raise RuntimeError("Codex is not logged in. Run `codex login` on this PC.")
     auth = await _refresh(_read_auth())
-    payload = to_payload(messages, model or DEFAULT_MODEL)
+    payload = to_payload(messages, model or DEFAULT_MODEL, reasoning_effort, verbosity)
     buf: list[str] = []
     full = ""
     async with httpx.AsyncClient(timeout=180.0) as client:
@@ -370,7 +399,12 @@ async def chat_completions(body: dict) -> dict:
     model = body.get("model") or DEFAULT_MODEL
     if model in ("zeroweight", "llama3.2", ""):
         model = DEFAULT_MODEL
-    text = await complete(body.get("messages") or [], model)
+    text = await complete(
+        body.get("messages") or [],
+        model,
+        reasoning_effort=body.get("reasoning_effort"),
+        verbosity=body.get("verbosity"),
+    )
     return as_chat_completion(text, model)
 
 

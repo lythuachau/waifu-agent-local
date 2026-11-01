@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: waifu-agent-local:1.0.4.58
+    image: waifu-agent-local:1.0.4.59
     container_name: waifu-agent
     restart: unless-stopped
     init: true

@@ -645,6 +645,11 @@ AGENT_ACTION_ALIAS = {
     "execute_javascript": "execute_javascript",
     "act_batch": "act_batch",
     "batch": "act_batch",
+    "set_form_value": "set_form_value",
+    "go_back": "go_back",
+    "back": "go_back",
+    "go_forward": "go_forward",
+    "forward": "go_forward",
 }
 
 def _agent_scroll_hits(body: dict) -> int:
@@ -682,6 +687,7 @@ AGENT_OUTPUT_NUDGE = (
     "action is exactly one key: click_element_by_index {index}, "
     "input_text {index,text}, press_key {key}, scroll {down:true}, "
     "act_batch {steps:[{click_element_by_index:{index}},{input_text:{index,text}},{press_key:{key}}]}, "
+    "set_form_value {index,value}, go_back {}, go_forward {}, "
     "go_to_url {url}, open_new_tab {url}, switch_to_tab {tab_id}, close_tab {tab_id}, "
     "wait {seconds}, done {text,success}, act {goal,values}. "
     "Prefer act_batch when filling a form or typing then Enter in one go. "
@@ -886,6 +892,20 @@ def _tool_input(name: str, raw, obj: dict, content: str, last_user: str) -> dict
         return _sanitize_batch(raw, obj)
     if name == "ask_user":
         return {"question": str(obj.get("question") or content)[:500]}
+    if name == "set_form_value":
+        n = _index_from(raw if isinstance(raw, dict) else {}, content, last_user)
+        if n is None:
+            n = _index_from(obj, content, last_user)
+        val = ""
+        if isinstance(raw, dict):
+            val = raw.get("value") or raw.get("text") or ""
+        elif isinstance(raw, str):
+            val = raw
+        if not val:
+            val = obj.get("value") or obj.get("text") or ""
+        return {"index": n if n is not None else 0, "value": str(val)}
+    if name in ("go_back", "go_forward"):
+        return {}
     if name in ("go_to_url", "open_new_tab"):
         return {"url": _url_from(raw, obj, content, last_user)}
     if name in ("switch_to_tab", "close_tab"):
@@ -1609,8 +1629,6 @@ async def codex_chat(body: dict):
     payload.pop("tools", None)
     payload.pop("tool_choice", None)
     payload.pop("parallel_tool_calls", None)
-    payload.pop("reasoning_effort", None)
-    payload.pop("verbosity", None)
     if name == "reply":
         payload["messages"] = scrub_companion_messages(payload.get("messages") or [])
     elif name == "AgentOutput":
