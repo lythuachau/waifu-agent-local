@@ -20513,8 +20513,8 @@ function modelPatch(body, baseURL) {
 			debug$2("Patch GPT-5.1/5.2: reasoning_effort=none");
 			body.reasoning_effort = "none";
 		} else if (reasonsByDefault(model)) {
-			debug$2("Patch GPT-5.6+: reasoning_effort=none");
-			body.reasoning_effort = "none";
+			debug$2("Patch GPT-5.6+: reasoning_effort=low");
+			body.reasoning_effort = "low";
 		} else if (/^gpt-5(-|$)/.test(modelName)) {
 			debug$2("Patch GPT-5: reasoning_effort=minimal");
 			body.reasoning_effort = "minimal";
@@ -23612,20 +23612,30 @@ function pageText(state) {
 	if (content.replace(/\[\d+\]|<[^>]*>/g, " ").replace(/\s+/g, " ").trim().length < MIN_TEXT_CHARS) return null;
 	return content.length > MAX_TEXT_CHARS ? `${content.slice(0, MAX_TEXT_CHARS)}\n…` : content;
 }
-function chapterFromContent(content) {
-	const raw = String(content || "");
-	const canvasMark = "[Canvas fillText]";
-	const pageMark = "[Page text]";
-	let body = raw;
-	if (raw.includes(canvasMark)) body = raw.slice(raw.indexOf(canvasMark) + canvasMark.length);
-	const canvasLen = body.replace(/\s+/g, " ").trim().length;
-	if ((!raw.includes(canvasMark) || canvasLen < 160) && raw.includes(pageMark)) {
-		body = raw.slice(raw.indexOf(pageMark) + pageMark.length);
-	}
+function cleanupChapterDump(body) {
+	body = String(body || "");
 	body = body.replace(/\[Start of page\]|\[End of page\]/g, " ");
 	body = body.replace(/Interactive elements[\s\S]*$/i, " ");
 	body = body.replace(/<[^>]+>/g, " ").replace(/\[\d+\]/g, " ");
 	return body.replace(/\s+/g, " ").trim();
+}
+function chapterFromContent(content) {
+	const raw = String(content || "");
+	const canvasMark = "[Canvas fillText]";
+	const pageMark = "[Page text]";
+	let canvas = "";
+	let page = "";
+	if (raw.includes(canvasMark)) {
+		canvas = raw.slice(raw.indexOf(canvasMark) + canvasMark.length);
+		const cut = canvas.indexOf(pageMark);
+		if (cut >= 0) canvas = canvas.slice(0, cut);
+		canvas = cleanupChapterDump(canvas);
+	}
+	if (raw.includes(pageMark)) page = cleanupChapterDump(raw.slice(raw.indexOf(pageMark) + pageMark.length));
+	// Canvas novels paint the chapter after the player chrome. Do not glue that chrome onto a short canvas.
+	if (canvas.length >= 800) return canvas;
+	if (page) return page;
+	return canvas || cleanupChapterDump(raw);
 }
 function collapseWs(s) {
 	return String(s || "").replace(/\s+/g, " ").trim();
@@ -23771,12 +23781,50 @@ async function locateChapter(dump, url) {
 	return sliced;
 }
 var CHAPTER_LOADING = /đang mở chương|đang tải|đang load|\bloading\b|vui lòng chờ/i;
-var MIN_CHAPTER_DUMP = 160;
-function isRipeChapterDump(text, prevHead) {
+var MIN_CHAPTER_DUMP = 800;
+/** Player chrome on truyen.moe ("Số từ", "Nghe chương") shows up before the canvas chapter. */
+function isReaderShell(text) {
+	const s = collapseWs(text);
+	if (s.length >= 2500) return false;
+	return /Số từ\s*:|Nghe chương|Sẵn sàng đọc|Đang chuẩn bị nội dung|Đang mở chương/.test(s);
+}
+/** Two dumps are the same chapter even if a clock or counter digit moved. */
+function sameChapterSnapshot(a, b) {
+	if (a === b) return true;
+	if (!a || !b || Math.abs(a.length - b.length) > 200) return false;
+	const n = Math.min(a.length, b.length);
+	const step = Math.max(1, Math.floor(n / 64));
+	let same = 0;
+	let seen = 0;
+	for (let i = 0; i < n; i += step) {
+		seen++;
+		if (a.charCodeAt(i) === b.charCodeAt(i)) same++;
+	}
+	return seen > 0 && same / seen >= 0.9;
+}
+/**
+* A title swap ("Chương 1" → "Chương 2") is not a new chapter. The opening
+* prose of the chapter we just read has to leave the dump first.
+*/
+function previousProseRemains(next, prev) {
+	const a = collapseWs(next);
+	const b = collapseWs(prev);
+	if (b.length < 80) return false;
+	if (a.slice(0, 160) === b.slice(0, 160)) return true;
+	// A later quotation or a repeated status block is a new chapter.
+	// The old chapter is still on screen only when its opening still sits at the front.
+	const skip = Math.min(48, Math.floor(b.length / 5));
+	const opening = b.slice(skip, skip + 140);
+	if (opening.length < 80) return false;
+	const at = a.indexOf(opening);
+	return at >= 0 && at < 180;
+}
+function isRipeChapterDump(text, prevBody) {
 	const s = collapseWs(text);
 	if (s.length < MIN_CHAPTER_DUMP) return false;
-	if (prevHead && s.slice(0, 120) === prevHead) return false;
+	if (isReaderShell(s)) return false;
 	if (CHAPTER_LOADING.test(s) && s.length < 1200) return false;
+	if (previousProseRemains(s, prevBody)) return false;
 	return true;
 }
 async function locateChapterRetry(dump, url, shouldStop, attempts = 3) {
@@ -23799,13 +23847,20 @@ async function locateChapterRetry(dump, url, shouldStop, attempts = 3) {
 	throw last;
 }
 function nextChapterUrl(url) {
+	const raw = String(url || "").trim();
+	if (!raw) return null;
 	try {
-		const u = new URL(url);
-		const m = u.pathname.match(/^(.*\/chapters\/)(\d+(?:\.\d+)?)\/?$/i);
-		if (!m) return null;
-		const nxt = nextChapterNum(Number(m[2]));
-		if (nxt == null) return null;
-		return `${u.origin}${m[1]}${nxt}${u.search}`;
+		const u = new URL(raw);
+		const paths = [u.pathname, u.hash.replace(/^#/, "")];
+		for (const path of paths) {
+			const m = String(path || "").match(/^(.*\/chapters\/)(\d+(?:\.\d+)?)\/?$/i);
+			if (!m) continue;
+			const nxt = nextChapterNum(Number(m[2]));
+			if (nxt == null) continue;
+			const suffix = path === u.pathname ? u.search : "";
+			return `${u.origin}${m[1]}${nxt}${suffix}`;
+		}
+		return null;
 	} catch {
 		return null;
 	}
@@ -23921,8 +23976,8 @@ function messageOf(error) {
 //#endregion
 //#region src/character/voice/playback.ts
 var CHUNK_TIMEOUT_MS = 18e4;
-/** Next-chapter TTS starts when this much audio remains (long chapters). */
-var PREFETCH_REMAIN_S = 10;
+/** Extra seconds so the next page can paint before TTS of that chapter starts. */
+var PREFETCH_PAGE_SLACK_S = 4;
 /** Do not change the tab mid-speech when the chapter is shorter than this. */
 var PREFETCH_MIN_DUR_S = 20;
 /** Tail too small to hide infer: wait for onended, then navigate. */
@@ -23958,6 +24013,8 @@ var Playback = class {
 	events;
 	/** EMA of wall/audio from recent utterances (GPU infer ≈ 0.22). */
 	#rtf = 0.25;
+	/** Wall-clock seconds of the last full TTS synthesis. 0 until the first one finishes. */
+	#synthWallSec = 0;
 	#context = null;
 	#source = null;
 	#sources = new Set();
@@ -24014,6 +24071,19 @@ var Playback = class {
 	estimateInferSec(text) {
 		return estimateSpeechSec(text) * Math.max(0.15, this.#rtf);
 	}
+	#noteSynthWall(sec) {
+		if (sec > 0.3 && sec < 240) this.#synthWallSec = sec;
+	}
+	/**
+	* How early to open the next chapter so its TTS can finish with the current audio.
+	* Uses the last measured synthesis. The first chapter falls back to the RTF estimate.
+	*/
+	prefetchLeadSec() {
+		const dur = this.scheduledDuration();
+		const measured = this.#synthWallSec > 0.4 ? this.#synthWallSec + PREFETCH_PAGE_SLACK_S : 0;
+		const estimated = (dur > 1 ? dur * Math.max(0.15, this.#rtf) : 8) + PREFETCH_PAGE_SLACK_S;
+		return Math.min(180, Math.max(2, measured || estimated));
+	}
 	/** Resolves when remaining scheduled audio is <= sec. Waits until TTS has fully queued. */
 	waitUntilRemaining(sec) {
 		const nonce = this.#nonce;
@@ -24033,9 +24103,10 @@ var Playback = class {
 		});
 	}
 	/**
-	 * Prefetch window: ~10s remaining on long chapters; almost-ended on short ones
-	 * so the tab does not jump while a short chapter is still speaking.
-	 */
+	* Open the next chapter when the remaining audio is about one TTS synthesis
+	* plus a few seconds for the page to paint. A chapter shorter than that lead
+	* plays out before the tab changes.
+	*/
 	waitUntilNearEnd() {
 		const nonce = this.#nonce;
 		return new Promise((resolve) => {
@@ -24051,7 +24122,8 @@ var Playback = class {
 					setTimeout(tick, 120);
 					return;
 				}
-				const threshold = dur < PREFETCH_MIN_DUR_S ? 0.15 : Math.min(PREFETCH_REMAIN_S, Math.max(4, dur * 0.12));
+				const lead = this.prefetchLeadSec();
+				const threshold = dur <= lead + PREFETCH_SKIP_TAIL_S || dur < PREFETCH_MIN_DUR_S ? PREFETCH_SKIP_TAIL_S : lead;
 				if (left <= threshold) return resolve();
 				setTimeout(tick, 100);
 			};
@@ -24425,6 +24497,7 @@ var Playback = class {
 						clearTimeout(timer);
 						timer = null;
 					}
+					this.#noteSynthWall((performance.now() - tSend) / 1e3);
 					if (streamPcm) {
 						if (buffered > 0.5) {
 							const meas = (performance.now() - tSend) / 1e3 / buffered;
@@ -24472,6 +24545,7 @@ var Playback = class {
 			clearTimeout(this.#idle);
 			this.#idle = null;
 		}
+		const tSend = performance.now();
 		try {
 		const ws = await this.#connect();
 		const context = this.#ensureContext();
@@ -24536,6 +24610,7 @@ var Playback = class {
 			}
 			bump();
 		});
+		this.#noteSynthWall((performance.now() - tSend) / 1e3);
 		if (!frames) return null;
 		const bytes = concat(frames);
 		try {
@@ -25637,17 +25712,80 @@ function useCharacter(settings, onVoiceMessage) {
 		let lastError = null;
 		/** @type {{ index: number, buffer: Promise<AudioBuffer|null>, body: string } | null} */
 		let prepared = null;
-		const grabBody = async (tabId, prevHead, tries, delayMs) => {
+		let seenPageUrl = "";
+		let seenTitle = "";
+		const grabBody = async (tabId, prevBody, tries, delayMs) => {
+			let stable = "";
+			let stableHits = 0;
 			for (let retry = 0; retry < tries; retry++) {
 				if (shouldStop?.()) return "";
 				if (retry) await new Promise((r) => setTimeout(r, delayMs));
 				try {
 					const state = await pageControl(tabId, "get_browser_state");
+					if (state?.url) seenPageUrl = state.url;
+					if (state?.title) seenTitle = state.title;
 					const nextBody = chapterFromContent(state?.content);
-					if (isRipeChapterDump(nextBody, prevHead)) return nextBody;
-				} catch {}
+					if (!isRipeChapterDump(nextBody, prevBody)) {
+						stable = "";
+						stableHits = 0;
+						continue;
+					}
+					if (sameChapterSnapshot(nextBody, stable)) {
+						stableHits++;
+						if (stableHits >= 2) return nextBody;
+					} else {
+						stable = nextBody;
+						stableHits = 1;
+					}
+				} catch {
+					stable = "";
+					stableHits = 0;
+				}
 			}
 			return "";
+		};
+		/** Re-read the tab between locate tries. A bad early dump must not be reused. */
+		const showChapterTab = async (tabId) => {
+			try {
+				const tab = await chrome.tabs.get(tabId);
+				const win = tab.windowId == null ? null : await chrome.windows.get(tab.windowId);
+				if (!tab.discarded && tab.active && win?.focused) return;
+				setNotice("Tab truyện đang ở nền. Mở lại để lấy chữ chương…");
+				await chrome.tabs.update(tabId, { active: true });
+				if (tab.windowId != null) await chrome.windows.update(tab.windowId, { focused: true });
+			} catch (error) {
+				console.warn("[readChapters] show tab", error);
+			}
+		};
+		const locateNext = async (tabId, url, prevBody) => {
+			await showChapterTab(tabId);
+			let last = new Error("Não không ghim được mốc chương tiếp.");
+			for (let attempt = 0; attempt < 3; attempt++) {
+				if (shouldStop?.()) {
+					const stopped = new Error("stopped");
+					stopped.stopped = true;
+					throw stopped;
+				}
+				if (attempt) await new Promise((r) => setTimeout(r, 700));
+				const dump = await grabBody(tabId, prevBody, 22, 650);
+				if (shouldStop?.()) {
+					const stopped = new Error("stopped");
+					stopped.stopped = true;
+					throw stopped;
+				}
+				if (!dump) {
+					last = new Error(`Chưa lấy được chữ chương (dump chưa chín).`);
+					continue;
+				}
+				try {
+					return await locateChapter(titledDump(dump), url);
+				} catch (error) {
+					if (error?.stopped) throw error;
+					last = error instanceof Error ? error : new Error(String(error));
+					console.warn(`[readChapters] next locate ${attempt + 1}/3:`, last.message);
+				}
+			}
+			throw last;
 		};
 		const fail = (message) => {
 			keepNotice = true;
@@ -25658,14 +25796,44 @@ function useCharacter(settings, onVoiceMessage) {
 			await chrome.tabs.update(tabId, { url: next });
 			await waitTabUrl(tabId, next);
 		};
+		const titledDump = (dump) => {
+			const fromTitle = String(seenTitle || "").match(/Chương\s+\d+(?:\.\d+)?/i);
+			const n = chapterNumFromUrl(seenPageUrl);
+			const title = collapseWs(fromTitle ? fromTitle[0] : n == null ? "" : `Chương ${n}`);
+			if (!title || collapseWs(dump).includes(title)) return dump;
+			return `${title}\n${dump}`;
+		};
+		const resolveNextChapter = async (tabId, tabUrl) => {
+			const fromUrl = nextChapterUrl(seenPageUrl) || nextChapterUrl(tabUrl);
+			if (fromUrl) return fromUrl;
+			try {
+				const found = await pageControl(tabId, "next_chapter_url");
+				const href = String(found?.url || "").trim();
+				if (href) return href;
+			} catch (error) {
+				console.warn("[readChapters] next link", error);
+			}
+			return null;
+		};
+		let chapterTabId = 0;
 		for (let i = 0; i < n; i++) {
 			if (shouldStop?.()) break;
-			const [tab] = await chrome.tabs.query({
-				active: true,
-				currentWindow: true
-			});
-			if (!tab?.id) {
-				fail("Không có tab đang mở.");
+			if (!chapterTabId) {
+				const [active] = await chrome.tabs.query({
+					active: true,
+					currentWindow: true
+				});
+				if (!active?.id) {
+					fail("Không có tab đang mở.");
+					break;
+				}
+				chapterTabId = active.id;
+			}
+			let tab;
+			try {
+				tab = await chrome.tabs.get(chapterTabId);
+			} catch {
+				fail("Tab truyện đã đóng.");
 				break;
 			}
 			let body = pendingBody;
@@ -25682,13 +25850,14 @@ function useCharacter(settings, onVoiceMessage) {
 			if (!alreadySliced) {
 				setNotice(`Não đang ghim mốc chương ${i + 1}/${n}`);
 				try {
-					spoken = await locateChapterRetry(body, tab.url, shouldStop);
+					spoken = await locateChapterRetry(titledDump(body), seenPageUrl || tab.url, shouldStop);
 				} catch (error) {
 					if (error?.stopped || shouldStop?.()) break;
 					fail(error instanceof Error ? error.message : "Não không ghim được mốc chương. Dừng.");
 					break;
 				}
 			}
+			if (shouldStop?.()) break;
 			setNotice(`Đang đọc chương ${i + 1}/${n}`);
 			const id = { text: `Chương ${i + 1}/${n}` };
 			let playing;
@@ -25698,17 +25867,18 @@ function useCharacter(settings, onVoiceMessage) {
 				if (shouldStop?.()) break;
 				playing = buf ? playback.playPrepared(buf, id) : playback.say(toChunks(spoken, new Set()), id);
 			} else {
+				if (shouldStop?.()) break;
 				playing = playback.say(toChunks(spoken, new Set()), id);
 			}
 			if (i + 1 >= n || shouldStop?.()) {
 				await playing;
 				break;
 			}
-			const next = nextChapterUrl(tab.url);
+			const next = await resolveNextChapter(tab.id, tab.url);
 			if (!next) {
 				await playing;
 				if (shouldStop?.()) break;
-				fail("Không tìm thấy chương tiếp (URL cần dạng /chapters/N hoặc /chapters/N.5).");
+				fail(`Không tìm thấy chương tiếp. Trang hiện tại: ${seenPageUrl || tab.url || "(không có URL)"}`);
 				break;
 			}
 			await Promise.race([playing, playback.waitUntilNearEnd()]);
@@ -25719,7 +25889,7 @@ function useCharacter(settings, onVoiceMessage) {
 			const left = playback.remaining();
 			const dur = playback.scheduledDuration();
 			const skipPrefetch = dur < PREFETCH_MIN_DUR_S || left <= PREFETCH_SKIP_TAIL_S || left === Infinity || !playback.speaking;
-			const prevHead = body.slice(0, 120);
+			const prevBody = body;
 			if (skipPrefetch) {
 				await playing;
 				if (shouldStop?.()) break;
@@ -25729,14 +25899,9 @@ function useCharacter(settings, onVoiceMessage) {
 					fail(error instanceof Error ? error.message : "Không mở được chương tiếp.");
 					break;
 				}
-				pendingBody = await grabBody(tab.id, prevHead, 20, 800);
-				if (!pendingBody) {
-					fail(`Chưa lấy được chữ chương ${i + 2} (dump chưa chín). Dừng.`);
-					break;
-				}
-				setNotice(`Não đang ghim mốc chương ${i + 2}/${n}`);
+				setNotice(`Đợi chữ chương ${i + 2}/${n}…`);
 				try {
-					const sliced = await locateChapterRetry(pendingBody, next, shouldStop);
+					const sliced = await locateNext(tab.id, next, prevBody);
 					prepared = {
 						index: i + 1,
 						buffer: Promise.resolve(null),
@@ -25750,7 +25915,7 @@ function useCharacter(settings, onVoiceMessage) {
 				}
 				continue;
 			}
-			setNotice(`Còn ~${Math.round(left)}s — não ghim chương ${i + 2}/${n}`);
+			setNotice(`Còn ~${Math.round(left)}s — đợi chữ chương ${i + 2}/${n}…`);
 			try {
 				await openNext(tab.id, next);
 			} catch (error) {
@@ -25758,19 +25923,13 @@ function useCharacter(settings, onVoiceMessage) {
 				fail(error instanceof Error ? error.message : "Không mở được chương tiếp.");
 				break;
 			}
-			const nextBody = await grabBody(tab.id, prevHead, 20, 800);
 			if (shouldStop?.()) {
 				await playing;
 				break;
 			}
-			if (!nextBody) {
-				await playing;
-				fail(`Chưa lấy được chữ chương ${i + 2} (dump chưa chín). Dừng.`);
-				break;
-			}
 			let slicedNext = "";
 			try {
-				slicedNext = await locateChapterRetry(nextBody, next, shouldStop);
+				slicedNext = await locateNext(tab.id, next, prevBody);
 			} catch (error) {
 				await playing;
 				if (error?.stopped || shouldStop?.()) break;
@@ -25788,7 +25947,7 @@ function useCharacter(settings, onVoiceMessage) {
 				await playing;
 				continue;
 			}
-			console.log(`[readChapters] prefetch ch${i + 2} left=${stillLeft.toFixed(1)}s dur=${dur.toFixed(1)}s infer~${inferNeed.toFixed(1)}s`);
+			console.log(`[readChapters] prefetch ch${i + 2} left=${stillLeft.toFixed(1)}s dur=${dur.toFixed(1)}s lead=${playback.prefetchLeadSec().toFixed(1)}s infer~${inferNeed.toFixed(1)}s`);
 			prepared = {
 				index: i + 1,
 				buffer: playback.prepare(slicedNext),

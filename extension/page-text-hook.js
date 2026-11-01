@@ -140,4 +140,37 @@
 	});
 	setInterval(schedule, 1500);
 	schedule();
+
+	let lastHref = location.href;
+	function resetDrawnText() {
+		for (const c of document.querySelectorAll("canvas")) c.__zwLine = [];
+		const canvasEl = document.getElementById("zw-canvas-text-dump");
+		if (canvasEl) canvasEl.textContent = "";
+		const pageEl = document.getElementById("zw-page-text-dump");
+		if (pageEl) pageEl.textContent = "";
+	}
+	function onLocationChange() {
+		if (location.href === lastHref) return;
+		lastHref = location.href;
+		resetDrawnText();
+		schedule();
+	}
+	const pushState = history.pushState;
+	history.pushState = function () {
+		const result = pushState.apply(this, arguments);
+		onLocationChange();
+		return result;
+	};
+	const replaceState = history.replaceState;
+	history.replaceState = function () {
+		const result = replaceState.apply(this, arguments);
+		onLocationChange();
+		return result;
+	};
+	window.addEventListener("popstate", onLocationChange);
+	document.addEventListener("visibilitychange", () => {
+		if (!document.hidden) schedule();
+	});
+	window.addEventListener("pageshow", () => schedule());
+	setInterval(onLocationChange, 400);
 })();

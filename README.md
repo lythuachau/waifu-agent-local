@@ -64,7 +64,7 @@ Pick the voice at `http://127.0.0.1:8787/settings` (Codex brain, per-avatar TTS)
 ## 3. Load the extension
 
 1. Chrome → `chrome://extensions` → Developer mode → **Load unpacked**
-2. Pick the `extension` folder in this clone (manifest matches `VERSION`, currently `1.0.4.60`)
+2. Pick the `extension` folder in this clone (manifest matches `VERSION`, currently `1.0.4.61`)
 3. Reload unpacked after each renderer patch
 4. Open a normal `http`/`https` page (not `chrome://`). Side panel key is `local`.
 5. Brain is **Codex** (Cài đặt → Não → Đăng nhập Codex). Ollama is off.

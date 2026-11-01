@@ -4554,11 +4554,24 @@ async function mountAvatar(container, payload, callbacks, signal) {
 				}
 			}
 		}
+		function findNextChapterHref() {
+			const labelOf = (el) => (el.innerText || el.getAttribute("aria-label") || el.getAttribute("title") || "").replace(/\s+/g, " ").trim();
+			const links = [...document.querySelectorAll("a[href]")];
+			const labeled = links.find((a) => /^(chương|chap|chapter)\s*(sau|tiếp|next)\b|\bnext chapter\b/i.test(labelOf(a)));
+			if (labeled?.href) return labeled.href;
+			const rel = document.querySelector("a[rel~='next'][href], link[rel~='next'][href]");
+			if (rel?.href) return rel.href;
+			return "";
+		}
 		chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 			if (message.type !== "PAGE_CONTROL") return;
 			const { action, payload } = message;
 			if (action === "count_viewport_media") {
 				sendResponse({ count: countViewportMedia() });
+				return;
+			}
+			if (action === "next_chapter_url") {
+				sendResponse({ url: findNextChapterHref() });
 				return;
 			}
 			const methodName = getMethodName(action);

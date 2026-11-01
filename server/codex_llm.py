@@ -358,27 +358,40 @@ def _text_from_sse_line(line: str, buf: list[str]) -> str | None:
     return None
 
 
-async def complete(messages: list, model: str | None = None, reasoning_effort: str | None = None, verbosity: str | None = None) -> str:
-    if not logged_in():
-        raise RuntimeError("Codex is not logged in. Run `codex login` on this PC.")
-    auth = await _refresh(_read_auth())
-    payload = to_payload(messages, model or DEFAULT_MODEL, reasoning_effort, verbosity)
+async def _stream_reply(client, auth: dict, payload: dict) -> str:
     buf: list[str] = []
     full = ""
-    async with httpx.AsyncClient(timeout=180.0) as client:
-        async with client.stream("POST", RESPONSES_URL, headers=_headers(auth), json=payload) as r:
-            if r.status_code >= 400:
-                err = (await r.aread())[:400].decode("utf-8", "replace")
-                raise RuntimeError(f"Codex HTTP {r.status_code}: {err}")
-            async for line in r.aiter_lines():
-                done = _text_from_sse_line(line, buf)
-                if done:
-                    full = done
+    async with client.stream("POST", RESPONSES_URL, headers=_headers(auth), json=payload) as r:
+        if r.status_code >= 400:
+            err = (await r.aread())[:400].decode("utf-8", "replace")
+            raise RuntimeError(f"Codex HTTP {r.status_code}: {err}")
+        async for line in r.aiter_lines():
+            done = _text_from_sse_line(line, buf)
+            if done:
+                full = done
     text = (full or "".join(buf)).strip()
     if not text:
         log.warning("codex empty reply for model %s", payload.get("model"))
         return "Mình đây."
     return text
+
+
+async def complete(messages: list, model: str | None = None, reasoning_effort: str | None = None, verbosity: str | None = None) -> str:
+    if not logged_in():
+        raise RuntimeError("Codex is not logged in. Run `codex login` on this PC.")
+    auth = await _refresh(_read_auth())
+    payload = to_payload(messages, model or DEFAULT_MODEL, reasoning_effort, verbosity)
+    async with httpx.AsyncClient(timeout=180.0) as client:
+        try:
+            return await _stream_reply(client, auth, payload)
+        except RuntimeError as e:
+            effort = (payload.get("reasoning") or {}).get("effort")
+            # gpt-6.1-sol rejects the "minimal" stand-in for effort "none".
+            if effort == "minimal" and "effort" in str(e).lower() and "unsupported" in str(e).lower():
+                log.warning("codex effort minimal rejected for %s, retry low", payload.get("model"))
+                payload = {**payload, "reasoning": {"effort": "low"}}
+                return await _stream_reply(client, auth, payload)
+            raise
 
 
 def as_chat_completion(text: str, model: str) -> dict:
