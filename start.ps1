@@ -20,16 +20,8 @@ if (-not $env:LLM_API_KEY) { $env:LLM_API_KEY = "ollama" }
 if (-not $env:LLM_MODEL) { $env:LLM_MODEL = "llama3.2" }
 if (-not $env:TTS_VOICE) { $env:TTS_VOICE = "ja-JP-NanamiNeural" }
 if (-not $env:LLM_BACKEND) { $env:LLM_BACKEND = "codex" }
-foreach ($cudaBin in @(
-  $env:CUDA13_BIN,
-  "E:\ll\cuda13-runtime\bin",
-  (Join-Path $PSScriptRoot "..\..\cuda13-runtime\bin")
-)) {
-  if ($cudaBin -and (Test-Path $cudaBin)) {
-    $env:PATH = "$cudaBin;$env:PATH"
-    if (-not $env:ZEROTTS_DEVICE) { $env:ZEROTTS_DEVICE = "cuda" }
-    break
-  }
+if ($env:CUDA13_BIN -and (Test-Path $env:CUDA13_BIN)) {
+  $env:PATH = "$($env:CUDA13_BIN);$env:PATH"
 }
 
 $busy = Get-NetTCPConnection -LocalPort 8787 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1

@@ -19,10 +19,12 @@ Animated avatars run fully offline. `offline_pack.py` downloaded the 9 system `.
 
 ## 0. Prerequisites
 
-- Python 3.11+
+- Git
 - Chrome (load unpacked)
-- ZeroTTS Python package from `https://github.com/lythuachau/ZeroTTS` (pulled by `start.ps1` via `server/requirements.txt`; not PyPI)
-- An LLM backend: **Codex** (`codex login` or side panel Cài đặt → Não). Ollama is off.
+- Docker Desktop (WSL2) — recommended. Native Python 3.11+ is CPU TTS only.
+- NVIDIA driver for GPU TTS (Docker image already has CUDA 12.4)
+- Codex: side panel Cài đặt → Não → Đăng nhập Codex (or `codex login`). Ollama is off.
+- Copy `server/static/zai` (~3 GB) from the old PC / USB / Drive `waifu-agent-runtime/zai`. Not on GitHub.
 
 ## 1. Build the local extension (once)
 
@@ -38,8 +40,8 @@ This copies `unpacked\`, rewrites `https://api.zeroweight.ai` → `http://127.0.
 **Docker (Windows, starts at logon):** see `DOCKER.md`. New machine:
 
 ```powershell
-cd E:\ll\waifu-agent-extract\self-host
-.\scripts\setup-docker.ps1
+cd <clone>
+.\scripts\new-machine.ps1
 ```
 
 That builds the image, `docker compose up -d`, and registers scheduled task `WaifuAgent-Docker`. After reboot you do not run commands by hand.
@@ -62,10 +64,10 @@ Pick the voice at `http://127.0.0.1:8787/settings` (Codex brain, per-avatar TTS)
 ## 3. Load the extension
 
 1. Chrome → `chrome://extensions` → Developer mode → **Load unpacked**
-2. Pick `E:\ll\waifu-agent-extract\self-host\extension` (manifest `1.0.4.18`)
+2. Pick the `extension` folder in this clone (manifest matches `VERSION`, currently `1.0.4.60`)
 3. Reload unpacked after each renderer patch
-4. Open `http://127.0.0.1:8787/stage` (not `chrome://`). Side panel no longer asks for an API key; it uses `local` against this host.
-5. Advanced LLM: **Ollama local** (default) or **ChatGPT (Codex trên máy này)**. Paid OpenAI / Anthropic / Typesafe Jev key fields are removed.
+4. Open a normal `http`/`https` page (not `chrome://`). Side panel key is `local`.
+5. Brain is **Codex** (Cài đặt → Não → Đăng nhập Codex). Ollama is off.
 
 ## 4. Edit characters
 

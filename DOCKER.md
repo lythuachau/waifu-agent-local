@@ -6,15 +6,16 @@ Không đưa `zw_key.txt` vào image.
 
 ## Máy mới (một lần)
 
-1. Cài [Docker Desktop](https://www.docker.com/products/docker-desktop/) (WSL2) và Git. Máy cần **GPU NVIDIA** cho TTS. `setup-docker.ps1` gọi `scripts/install-cuda.ps1`: có card mà chưa `nvidia-smi` thì `winget install Nvidia.CUDA`. Không có NVIDIA thì chat vẫn chạy, TTS GPU không chạy.
-2. Clone repo private, copy `.zai` (Drive `waifu-agent-runtime/zai` hoặc USB) vào `server/static/zai`.
-3. Codex: trong side panel → Cài đặt → Não → **Đăng nhập Codex** (mã trên https://auth.openai.com/codex/device), hoặc `codex login` trên Windows. File `%USERPROFILE%\.codex\auth.json` được mount vào container.
-4. Chạy:
+1. Cài [Git](https://git-scm.com/), [Docker Desktop](https://www.docker.com/products/docker-desktop/) (WSL2), và [Chrome](https://www.google.com/chrome/). Máy cần **GPU NVIDIA** cho TTS. `setup-docker.ps1` gọi `scripts/install-cuda.ps1`: có card mà chưa `nvidia-smi` thì `winget install Nvidia.CUDA`. Không có NVIDIA thì chat vẫn chạy, TTS GPU không chạy.
+2. Clone repo private. Copy pack `.zai` (~3 GB, ~333 file) vào `server/static/zai` (máy cũ, USB, hoặc Drive `waifu-agent-runtime/zai`). Thiếu pack thì chat chạy, avatar tĩnh.
+3. Chạy `.\scripts\new-machine.ps1` (preflight Git/Chrome/zai rồi gọi setup-docker) hoặc:
 
 ```powershell
-cd <clone>\self-host
+cd <clone>
 .\scripts\setup-docker.ps1
 ```
+
+4. Chrome → Load unpacked → thư mục `extension`. Side panel → Cài đặt → Não → **Đăng nhập Codex** (mã trên https://auth.openai.com/codex/device). File `%USERPROFILE%\.codex\auth.json` được mount vào container. CLI `codex login` không bắt buộc.
 
 Script sẽ:
 
@@ -28,7 +29,7 @@ Script sẽ:
 - khởi động `cuda-watch.ps1` (CUDA fail → `docker restart` tối đa 1 lần / 10 phút)
 - đợi `http://127.0.0.1:8787/healthz`
 
-Chrome → Load unpacked → thư mục `extension`. Side panel key = `local`.
+Side panel key = `local`. First TTS downloads Hugging Face weights into the Docker volume (~once).
 
 ## Mỗi lần khởi động Windows
 

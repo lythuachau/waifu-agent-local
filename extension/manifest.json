@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Waifu Agent (local)",
   "description": "__MSG_extDescription__",
-  "version": "1.0.4.59",
+  "version": "1.0.4.60",
   "icons": {
     "16": "assets/waifu-agent-16.png",
     "32": "assets/waifu-agent-32.png",
